@@ -173,7 +173,7 @@ export function LandingNavbar() {
             asChild
             className="cursor-pointer"
           >
-            <Link href="/auth/sign-in">
+            <Link href="/sign-in">
               Masuk
             </Link>
           </Button>
