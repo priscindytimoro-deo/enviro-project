@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-
+import { useForm } from "react-hook-form"
 import { Plus } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import type { UserFormValues } from "@/types/user"
 
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/form"
 
 import { Input } from "@/components/ui/input"
-
 import {
   Select,
   SelectContent,
@@ -34,31 +33,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { useForm } from "react-hook-form"
-
-interface UserFormValues {
-  name: string
-  username: string
-  phone: string
-  role: string
-  status: string
-  verificationStatus: string
-}
-
-interface UserFormDialogProps {
+interface Props {
   onAddUser: (userData: UserFormValues) => void
 }
 
-export function UserFormDialog({
-  onAddUser,
-}: UserFormDialogProps) {
-
+export function UserFormDialog({ onAddUser }: Props) {
   const [open, setOpen] = useState(false)
 
   const form = useForm<UserFormValues>({
     defaultValues: {
       name: "",
-      username: "",
+      username: "", // ✅ FIX: tambah username
       phone: "",
       role: "",
       status: "Aktif",
@@ -67,11 +52,8 @@ export function UserFormDialog({
   })
 
   const onSubmit = (values: UserFormValues) => {
-
     onAddUser(values)
-
     form.reset()
-
     setOpen(false)
   }
 
@@ -79,118 +61,68 @@ export function UserFormDialog({
     <Dialog open={open} onOpenChange={setOpen}>
 
       <DialogTrigger asChild>
-
-        <Button className="cursor-pointer">
+        <Button>
           <Plus className="mr-2 size-4" />
           Tambah Pengguna
         </Button>
-
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[550px]">
 
         <DialogHeader>
-
-          <DialogTitle>
-            Tambah Pengguna
-          </DialogTitle>
-
-          <DialogDescription>
-            Tambahkan data pengguna baru ke sistem
-          </DialogDescription>
-
+          <DialogTitle>Tambah Pengguna</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-5"
+            className="space-y-4"
           >
 
-            {/* NAMA PENANGGUNG JAWAB */}
+            {/* NAME */}
             <FormField
               control={form.control}
               name="name"
-              rules={{
-                required: "Nama wajib diisi",
-              }}
+              rules={{ required: "Wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
-
-                  <FormLabel>
-                    Nama Penanggung Jawab
-                  </FormLabel>
-
+                  <FormLabel>Nama</FormLabel>
                   <FormControl>
-
-                    <Input
-                      placeholder="Masukkan nama penanggung jawab"
-                      {...field}
-                    />
-
+                    <Input {...field} />
                   </FormControl>
-
                   <FormMessage />
-
                 </FormItem>
               )}
             />
 
-            {/* USERNAME */}
+            {/* USERNAME ✅ NEW */}
             <FormField
               control={form.control}
               name="username"
-              rules={{
-                required: "Username wajib diisi",
-              }}
+              rules={{ required: "Wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
-
-                  <FormLabel>
-                    Username
-                  </FormLabel>
-
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
-
-                    <Input
-                      placeholder="Masukkan username"
-                      {...field}
-                    />
-
+                    <Input placeholder="contoh: admin_sistem" {...field} />
                   </FormControl>
-
                   <FormMessage />
-
                 </FormItem>
               )}
             />
 
-            {/* NO HP */}
+            {/* PHONE */}
             <FormField
               control={form.control}
               name="phone"
-              rules={{
-                required: "Nomor HP wajib diisi",
-              }}
+              rules={{ required: "Wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
-
-                  <FormLabel>
-                    Nomor HP
-                  </FormLabel>
-
+                  <FormLabel>Phone</FormLabel>
                   <FormControl>
-
-                    <Input
-                      placeholder="08xxxxxxxxxx"
-                      {...field}
-                    />
-
+                    <Input {...field} />
                   </FormControl>
-
                   <FormMessage />
-
                 </FormItem>
               )}
             />
@@ -199,59 +131,24 @@ export function UserFormDialog({
             <FormField
               control={form.control}
               name="role"
-              rules={{
-                required: "Role wajib dipilih",
-              }}
+              rules={{ required: true }}
               render={({ field }) => (
                 <FormItem>
-
-                  <FormLabel>
-                    Role
-                  </FormLabel>
-
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-
-                      <SelectTrigger className="cursor-pointer">
-
+                      <SelectTrigger>
                         <SelectValue placeholder="Pilih role" />
-
                       </SelectTrigger>
-
                     </FormControl>
 
                     <SelectContent>
-
-                      <SelectItem value="Admin">
-                        Admin
-                      </SelectItem>
-
-                      <SelectItem value="Kepala Dinas">
-                        Kepala Dinas
-                      </SelectItem>
-
-                      <SelectItem value="Kepala Bidang">
-                        Kepala Bidang
-                      </SelectItem>
-
-                      <SelectItem value="Pengawas">
-                        Pengawas
-                      </SelectItem>
-
-                      <SelectItem value="Pengguna">
-                        Pengguna
-                      </SelectItem>
-
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Pengawas">Pengawas</SelectItem>
+                      <SelectItem value="Pengguna">Pengguna</SelectItem>
                     </SelectContent>
-
                   </Select>
-
                   <FormMessage />
-
                 </FormItem>
               )}
             />
@@ -260,131 +157,57 @@ export function UserFormDialog({
             <FormField
               control={form.control}
               name="status"
-              rules={{
-                required: "Status wajib dipilih",
-              }}
               render={({ field }) => (
                 <FormItem>
+                  <FormLabel>Status</FormLabel>
 
-                  <FormLabel>
-                    Status
-                  </FormLabel>
-
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-
-                      <SelectTrigger className="cursor-pointer">
-
+                      <SelectTrigger>
                         <SelectValue placeholder="Pilih status" />
-
                       </SelectTrigger>
-
                     </FormControl>
 
                     <SelectContent>
-
-                      <SelectItem value="Aktif">
-                        Aktif
-                      </SelectItem>
-
-                      <SelectItem value="Pending">
-                        Pending
-                      </SelectItem>
-
-                      <SelectItem value="Nonaktif">
-                        Nonaktif
-                      </SelectItem>
-
+                      <SelectItem value="Aktif">Aktif</SelectItem>
+                      <SelectItem value="Nonaktif">Nonaktif</SelectItem>
                     </SelectContent>
-
                   </Select>
 
                   <FormMessage />
-
                 </FormItem>
               )}
             />
 
-            {/* STATUS VERIFIKASI */}
+            {/* VERIFICATION STATUS */}
             <FormField
               control={form.control}
               name="verificationStatus"
-              rules={{
-                required: "Status verifikasi wajib dipilih",
-              }}
               render={({ field }) => (
                 <FormItem>
-
-                  <FormLabel>
-                    Status Verifikasi
-                  </FormLabel>
-
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-
-                    <FormControl>
-
-                      <SelectTrigger className="cursor-pointer">
-
-                        <SelectValue placeholder="Pilih status verifikasi" />
-
-                      </SelectTrigger>
-
-                    </FormControl>
-
+                  <FormLabel>Status Verifikasi</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-
-                      <SelectItem value="Terverifikasi">
-                        Terverifikasi
-                      </SelectItem>
-
-                      <SelectItem value="Belum Verifikasi">
-                        Belum Verifikasi
-                      </SelectItem>
-
+                      <SelectItem value="Terverifikasi">Terverifikasi</SelectItem>
+                      <SelectItem value="Belum Verifikasi">Belum Verifikasi</SelectItem>
                     </SelectContent>
-
                   </Select>
-
-                  <FormMessage />
-
                 </FormItem>
               )}
             />
 
             {/* BUTTON */}
             <div className="flex justify-end gap-2 pt-2">
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                className="cursor-pointer"
-              >
-                Batal
-              </Button>
-
-              <Button
-                type="submit"
-                className="cursor-pointer"
-              >
-                Simpan Pengguna
-              </Button>
-
+              <Button type="submit">Simpan</Button>
             </div>
 
           </form>
-
         </Form>
 
       </DialogContent>
-
     </Dialog>
   )
 }

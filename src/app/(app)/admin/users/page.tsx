@@ -1,146 +1,67 @@
 "use client"
 
 import { useState } from "react"
-
+import type { User, UserFormValues } from "@/types/user"
+import initialUsersData from "./data.json"
 import { DataTable } from "./components/data-table"
 
-import initialUsersData from "./data.json"
-
-// ======================================
-// INTERFACE USER
-// ======================================
-interface User {
-  id: number
-  name: string
-  email: string
-  avatar: string
-  role: string
-  usaha: string
-  status: string
-  joinedDate: string
-  lastLogin: string
-}
-
-// ======================================
-// FORM VALUES
-// ======================================
-interface UserFormValues {
-  name: string
-  email: string
-  role: string
-  usaha: string
-  status: string
-}
-
 export default function UsersPage() {
+  // FIX: langsung pakai tanpa cast berbahaya
+  const [users, setUsers] = useState<User[]>(
+    initialUsersData as User[]
+  )
 
-  // ======================================
-  // STATE USERS
-  // ======================================
-  const [users, setUsers] =
-    useState<User[]>(initialUsersData)
-
-  // ======================================
-  // GENERATE AVATAR
-  // ======================================
   const generateAvatar = (name: string) => {
+    const parts = name.split(" ")
 
-    const names = name.split(" ")
-
-    if (names.length >= 2) {
-      return `${names[0][0]}${names[1][0]}`
-        .toUpperCase()
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
     }
 
     return name.substring(0, 2).toUpperCase()
   }
 
-  // ======================================
-  // ADD USER
-  // ======================================
-  const handleAddUser = (
-    userData: UserFormValues
-  ) => {
-
+  const handleAddUser = (userData: UserFormValues) => {
     const newUser: User = {
-      id:
-        Math.max(...users.map((u) => u.id)) + 1,
-
+      id: Math.max(0, ...users.map((u) => u.id)) + 1,
       name: userData.name,
-
-      email: userData.email,
-
-      avatar: generateAvatar(userData.name),
-
+      username: userData.username,
+      phone: userData.phone,
       role: userData.role,
-
-      usaha: userData.usaha,
-
       status: userData.status,
-
-      joinedDate: new Date()
-        .toISOString()
-        .split("T")[0],
-
-      lastLogin: new Date()
-        .toISOString()
-        .split("T")[0],
+      verificationStatus: userData.verificationStatus,
+      avatar: generateAvatar(userData.name),
+      createdAt: new Date().toISOString().replace("T", " ").slice(0, 16),
     }
 
     setUsers((prev) => [newUser, ...prev])
   }
 
-  // ======================================
-  // DELETE USER
-  // ======================================
   const handleDeleteUser = (id: number) => {
-
-    setUsers((prev) =>
-      prev.filter((user) => user.id !== id)
-    )
+    setUsers((prev) => prev.filter((u) => u.id !== id))
   }
 
-  // ======================================
-  // EDIT USER
-  // ======================================
   const handleEditUser = (user: User) => {
-
-    console.log("Edit user:", user)
+    console.log("edit:", user)
   }
 
   return (
     <div className="flex flex-col gap-6">
-
-      {/* ======================================
-          HEADER
-      ====================================== */}
-      <div className="space-y-1 px-4 lg:px-6">
-
-        <h1 className="text-3xl font-bold tracking-tight">
-          Manajemen Pengguna
-        </h1>
-
+      <div className="px-4 lg:px-6 space-y-1">
+        <h1 className="text-3xl font-bold">Manajemen Pengguna</h1>
         <p className="text-muted-foreground">
-          Kelola data pengguna sistem monitoring
-          kepatuhan lingkungan hidup
+          Kelola data pengguna sistem
         </p>
-
       </div>
 
-      {/* ======================================
-          DATA TABLE
-      ====================================== */}
-      <div className="@container/main px-4 lg:px-6">
-
+      <div className="px-4 lg:px-6">
         <DataTable
           users={users}
+          onAddUser={handleAddUser}
           onDeleteUser={handleDeleteUser}
           onEditUser={handleEditUser}
-          onAddUser={handleAddUser}
         />
-
       </div>
-
     </div>
   )
 }

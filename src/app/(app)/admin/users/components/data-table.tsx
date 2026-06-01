@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import type {
+  User,
+  UserFormValues,
+} from "@/types/user"
 
 import {
   type ColumnDef,
@@ -56,25 +60,6 @@ import {
 
 import { UserFormDialog } from "./user-form-dialog"
 
-interface User {
-  id: number
-  name: string
-  email: string
-  phone: string
-  avatar: string
-  role: string
-  status: string
-  createdAt: string
-}
-
-interface UserFormValues {
-  name: string
-  email: string
-  phone: string
-  role: string
-  status: string
-}
-
 interface DataTableProps {
   users: User[]
   onDeleteUser: (id: number) => void
@@ -96,17 +81,12 @@ export function DataTable({
   const [globalFilter, setGlobalFilter] = useState("")
 
   const getStatusColor = (status: string) => {
-
     switch (status) {
-
       case "Terverifikasi":
         return "bg-green-100 text-green-700 border-green-200"
 
-      case "Pending":
+      case "Belum Verifikasi":
         return "bg-yellow-100 text-yellow-700 border-yellow-200"
-
-      case "Ditolak":
-        return "bg-red-100 text-red-700 border-red-200"
 
       default:
         return "bg-muted text-muted-foreground"
@@ -174,13 +154,13 @@ export function DataTable({
     },
 
     {
-      accessorKey: "email",
+      accessorKey: "username",
 
       header: "Username",
 
       cell: ({ row }) => (
         <span className="text-sm">
-          {row.getValue("email")}
+          {row.getValue("username")}
         </span>
       ),
     },
@@ -224,7 +204,7 @@ export function DataTable({
 
       cell: ({ row }) => {
 
-        const status = row.getValue("status") as string
+        const status = row.getValue("verificationStatus") as string
 
         return (
           <Badge

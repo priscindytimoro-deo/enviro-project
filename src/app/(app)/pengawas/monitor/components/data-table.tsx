@@ -32,56 +32,35 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { EllipsisVertical, Search } from "lucide-react"
-
 import type { Monitoring } from "../page"
 
 interface Props {
   data: Monitoring[]
-  onDelete: (id: number) => void
-  onSetJadwal: (id: number) => void
+  onDelete: (id: string) => void
+  onSetJadwal: (id: string) => void
 }
 
-export function DataTable({
-  data,
-  onDelete,
-  onSetJadwal,
-}: Props) {
+export function DataTable({ data = [], onDelete, onSetJadwal }: Props) {
   const [globalFilter, setGlobalFilter] = useState("")
 
   const columns: ColumnDef<Monitoring>[] = [
-    {
-      accessorKey: "namaUsaha",
-      header: "Nama Usaha/Instansi",
-    },
-    {
-      accessorKey: "jenisKegiatan",
-      header: "Jenis Kegiatan",
-    },
-    {
-      accessorKey: "jenisDokumen",
-      header: "Jenis Dokumen",
-    },
-    {
-      accessorKey: "nomorDokumen",
-      header: "Nomor Dokumen",
-    },
-    {
-      accessorKey: "tanggalTerbit",
-      header: "Tanggal Terbit",
-    },
-    {
-      accessorKey: "lokasi",
-      header: "Lokasi (Koordinat)",
-    },
+    { accessorKey: "namaUsaha", header: "Nama Usaha/Instansi" },
+    { accessorKey: "jenisKegiatan", header: "Jenis Kegiatan" },
+    { accessorKey: "jenisDokumen", header: "Jenis Dokumen" },
+    { accessorKey: "nomorDokumen", header: "Nomor Dokumen" },
+    { accessorKey: "tanggalTerbit", header: "Tanggal Terbit" },
+    { accessorKey: "lokasi", header: "Lokasi (Koordinat)" },
+
     {
       accessorKey: "jadwalPengawasan",
       header: "Jadwal Pengawasan",
       cell: ({ row }) => (
         <Badge variant="outline">
-          {row.getValue("jadwalPengawasan")}
+          {row.getValue("jadwalPengawasan") || "-"}
         </Badge>
       ),
     },
+
     {
       id: "actions",
       header: "Action",
@@ -97,9 +76,7 @@ export function DataTable({
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => onSetJadwal(item.id)}
-              >
+              <DropdownMenuItem onClick={() => onSetJadwal(item.id)}>
                 Set Jadwal
               </DropdownMenuItem>
 
@@ -153,10 +130,7 @@ export function DataTable({
               <TableRow key={hg.id}>
                 {hg.headers.map((h) => (
                   <TableHead key={h.id}>
-                    {flexRender(
-                      h.column.columnDef.header,
-                      h.getContext()
-                    )}
+                    {flexRender(h.column.columnDef.header, h.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -164,7 +138,7 @@ export function DataTable({
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
@@ -179,10 +153,7 @@ export function DataTable({
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center h-24"
-                >
+                <TableCell colSpan={columns.length} className="text-center h-24">
                   Tidak ada data monitoring
                 </TableCell>
               </TableRow>
@@ -193,11 +164,7 @@ export function DataTable({
 
       {/* PAGINATION */}
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-        >
+        <Button variant="outline" size="sm" onClick={() => table.nextPage()}>
           Next
         </Button>
       </div>

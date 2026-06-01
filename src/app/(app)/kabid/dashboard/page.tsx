@@ -1,3 +1,10 @@
+import { cookies } from "next/headers"
+import { createServerClient } from "@supabase/ssr"
+import { supabaseAdmin } from "@/lib/supabase-admin"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+
+
 import {
   Card,
   CardContent,
@@ -15,65 +22,36 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 
-// =========================
-// DATA DUMMY
-// =========================
-const stats = {
-  users: 124,
-  usaha: 89,
-  laporan: 76,
-}
+export default async function AdminDashboardPage() {
+  const cookieStore = await cookies()
 
-const tingkatKepatuhan = Math.round(
-  (stats.laporan / stats.usaha) * 100
-)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+      },
+    }
+  )
 
-// =========================
-// DATA LAPORAN TERBARU
-// =========================
-const latestReports = [
-  {
-    perusahaan: "PT Sejahtera Abadi",
-    jenis: "UKL-UPL",
-    tanggal: "27 Mei 2026",
-    status: "Terkirim",
-  },
-  {
-    perusahaan: "CV Hijau Lestari",
-    jenis: "SPPL",
-    tanggal: "26 Mei 2026",
-    status: "Diverifikasi",
-  },
-  {
-    perusahaan: "PT Energi Nusantara",
-    jenis: "AMDAL",
-    tanggal: "25 Mei 2026",
-    status: "Review",
-  },
-]
+const { data: users } = await supabaseAdmin
+  .from("profiles")
+  .select("*")
+  .order("created_at", { ascending: false })
 
-// =========================
-// DATA USER TERBARU
-// =========================
-const latestUsers = [
-  {
-    nama: "PT Maju Bersama",
-    email: "ptmaju@gmail.com",
-    status: "Aktif",
-  },
-  {
-    nama: "CV Alam Lestari",
-    email: "alam@gmail.com",
-    status: "Pending",
-  },
-  {
-    nama: "PT Flores Hijau",
-    email: "flores@gmail.com",
-    status: "Aktif",
-  },
-]
+  const stats = {
+    users: users?.length ?? 0,
+    usaha: 0,
+    laporan: 0,
+  }
 
-export default function AdminDashboardPage() {
+  const tingkatKepatuhan = 0
+
+  const latestUsers = users?.slice(0, 5) ?? []
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -196,18 +174,29 @@ export default function AdminDashboardPage() {
       ====================================== */}
       <Card>
 
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
 
-          <CardTitle>
-            Laporan Terbaru
-          </CardTitle>
+          <div>
 
-          <CardDescription>
-            Daftar laporan terbaru pelaku usaha
-          </CardDescription>
+            <CardTitle>
+              Laporan Terbaru
+            </CardTitle>
+
+            <CardDescription>
+              Daftar laporan terbaru pelaku usaha
+            </CardDescription>
+
+          </div>
+
+          <Button asChild variant="outline">
+
+            <Link href="/admin/report">
+              Lihat Selengkapnya
+            </Link>
+
+          </Button>
 
         </CardHeader>
-
         <CardContent>
 
           <div className="overflow-x-auto">
@@ -240,36 +229,16 @@ export default function AdminDashboardPage() {
 
               <tbody>
 
-                {latestReports.map((item, index) => (
+                <tr>
 
-                  <tr
-                    key={index}
-                    className="border-b"
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center text-muted-foreground"
                   >
+                    Belum ada data laporan
+                  </td>
 
-                    <td className="py-4">
-                      {item.perusahaan}
-                    </td>
-
-                    <td className="py-4">
-                      {item.jenis}
-                    </td>
-
-                    <td className="py-4">
-                      {item.tanggal}
-                    </td>
-
-                    <td className="py-4">
-
-                      <Badge>
-                        {item.status}
-                      </Badge>
-
-                    </td>
-
-                  </tr>
-
-                ))}
+                </tr>
 
               </tbody>
 
@@ -286,15 +255,27 @@ export default function AdminDashboardPage() {
       ====================================== */}
       <Card>
 
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
 
-          <CardTitle>
-            User Terbaru
-          </CardTitle>
+          <div>
 
-          <CardDescription>
-            Pengguna terbaru yang mendaftar
-          </CardDescription>
+            <CardTitle>
+              Pengguna Terbaru
+            </CardTitle>
+
+            <CardDescription>
+              Daftar pengguna terbaru
+            </CardDescription>
+
+          </div>
+
+          <Button asChild variant="outline">
+
+            <Link href="/admin/users">
+              Lihat Selengkapnya
+            </Link>
+
+          </Button>
 
         </CardHeader>
 
@@ -309,15 +290,15 @@ export default function AdminDashboardPage() {
                 <tr className="border-b">
 
                   <th className="py-3 text-left font-medium">
-                    Nama Perusahaan
+                    Nama Penanggung Jawab
                   </th>
 
                   <th className="py-3 text-left font-medium">
-                    Email
+                    No. HP
                   </th>
 
                   <th className="py-3 text-left font-medium">
-                    Status
+                    Role
                   </th>
 
                 </tr>
@@ -326,38 +307,49 @@ export default function AdminDashboardPage() {
 
               <tbody>
 
-                {latestUsers.map((item, index) => (
+                {latestUsers.length > 0 ? (
 
-                  <tr
-                    key={index}
-                    className="border-b"
-                  >
+                  latestUsers.map((item: any, index: number) => (
 
-                    <td className="py-4">
-                      {item.nama}
-                    </td>
+                    <tr
+                      key={index}
+                      className="border-b"
+                    >
 
-                    <td className="py-4">
-                      {item.email}
-                    </td>
+                      <td className="py-4">
+                        {item.nama_penanggung_jawab ?? "-"}
+                      </td>
 
-                    <td className="py-4">
+                      <td className="py-4">
+                        {item.no_hp ?? "-"}
+                      </td>
 
-                      <Badge
-                        variant={
-                          item.status === "Aktif"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {item.status}
-                      </Badge>
+                      <td className="py-4">
 
+                        <Badge>
+                          {item.role}
+                        </Badge>
+
+                      </td>
+
+                    </tr>
+
+                  ))
+
+                ) : (
+
+                  <tr>
+
+                    <td
+                      colSpan={3}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      Belum ada data pengguna
                     </td>
 
                   </tr>
 
-                ))}
+                )}
 
               </tbody>
 
