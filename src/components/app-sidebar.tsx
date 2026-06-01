@@ -2,18 +2,16 @@
 
 import * as React from "react"
 import Image from "next/image"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import {
-  LayoutDashboard,
-  FileText,
-  ClipboardList,
-  Bell,
-  Settings,
-} from "lucide-react"
-
-import Link from "next/link"
-
-import { SidebarNotification } from "@/components/sidebar-notification"
+  adminMenu,
+  userMenu,
+  kadisMenu,
+  kabidMenu,
+  pengawasMenu,
+} from "@/config/sidebar-menu"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -28,142 +26,129 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const data = {
-  user: {
-    name: "PT Sejahtera",
-    email: "pelakuusaha@example.com",
-    avatar: "/logo.svg",
-  },
-
-  navGroups: [
-    {
-      label: "Menu Utama",
-
-      items: [
-        {
-          title: "Dashboard",
-          url: "/dashboard",
-          icon: LayoutDashboard,
-        },
-
-        {
-          title: "Profil Usaha",
-          url: "/profil-usaha",
-          icon: FileText,
-        },
-
-        {
-          title: "Buat Laporan",
-          url: "/buat-laporan",
-          icon: FileText,
-        },
-
-        {
-          title: "Cek Laporan",
-          url: "/cek-laporan",
-          icon: ClipboardList,
-        },
-
-        {
-          title: "Pengaturan",
-          url: "/pengaturan",
-          icon: Settings,
-        },
-      ],
-    },
-  ],
-}
-
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+
+  const pathname = usePathname()
+
+  // =========================
+  // ROLE DETECTION
+  // =========================
+  const getRoleFromPath = (path: string) => {
+
+    if (path.startsWith("/admin")) return "admin"
+    if (path.startsWith("/kadis")) return "kadis"
+    if (path.startsWith("/kabid")) return "kabid"
+    if (path.startsWith("/pengawas")) return "pengawas"
+
+    return "user"
+  }
+
+  const role = getRoleFromPath(pathname)
+
+  // =========================
+  // MENU BY ROLE
+  // =========================
+  const menu =
+    role === "admin"
+      ? adminMenu
+      : role === "kadis"
+        ? kadisMenu
+        : role === "kabid"
+          ? kabidMenu
+          : role === "pengawas"
+            ? pengawasMenu
+            : userMenu
+
+  // =========================
+  // USER DISPLAY
+  // =========================
+  const userData = {
+    name:
+      role === "admin"
+        ? "Administrator"
+        : role === "kadis"
+          ? "Kepala Dinas"
+          : role === "kabid"
+            ? "Kepala Bidang"
+            : role === "pengawas"
+              ? "Pengawas"
+              : "Pelaku Usaha",
+
+    email:
+      role === "admin"
+        ? "admin@mplh-dlhtts.vercel.app"
+        : role === "kadis"
+          ? "kadis@mplh-dlhtts.vercel.app"
+          : role === "kabid"
+            ? "kabid@mplh-dlhtts.vercel.app"
+            : role === "pengawas"
+              ? "pengawas@mplh-dlhtts.vercel.app"
+              : "user@mplh-dlhtts.vercel.app",
+
+    avatar: "/logo.svg",
+  }
+
   return (
     <Sidebar {...props}>
 
-      {/* ======================================
-          SIDEBAR HEADER
-      ====================================== */}
+      {/* HEADER */}
       <SidebarHeader>
-
         <SidebarMenu>
-
           <SidebarMenuItem>
-
             <SidebarMenuButton size="lg" asChild>
 
-              <Link href="/dashboard">
+              <Link
+                href={
+                  role === "admin"
+                    ? "/admin/dashboard"
+                    : role === "kadis"
+                      ? "/kadis/dashboard"
+                      : role === "kabid"
+                        ? "/kabid/dashboard"
+                        : role === "pengawas"
+                          ? "/pengawas/dashboard"
+                          : "/dashboard"
+                }
+              >
 
-                {/* LOGO */}
-                <div className="
-                  flex aspect-square size-9
-                  items-center justify-center
-                  rounded-lg border
-                  bg-background overflow-hidden
-                ">
-
+                <div className="flex aspect-square size-9 items-center justify-center rounded-lg border bg-background overflow-hidden">
                   <Image
                     src="/logo.svg"
-                    alt="Monitor Patuh LH"
+                    alt="Monitor LH"
                     width={28}
                     height={28}
                     className="object-contain"
                     priority
                   />
-
                 </div>
 
-                {/* TITLE */}
-                <div className="
-                  grid flex-1 text-left
-                  text-sm leading-tight
-                ">
-
+                <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
                     MONITOR PATUH LH
                   </span>
 
                   <span className="truncate text-xs text-muted-foreground">
-                    Pelaku Usaha
+                    {userData.name}
                   </span>
-
                 </div>
 
               </Link>
 
             </SidebarMenuButton>
-
           </SidebarMenuItem>
-
         </SidebarMenu>
-
       </SidebarHeader>
 
-      {/* ======================================
-          SIDEBAR CONTENT
-      ====================================== */}
+      {/* CONTENT */}
       <SidebarContent>
-
-        {data.navGroups.map((group) => (
-
-          <NavMain
-            key={group.label}
-            label={group.label}
-            items={group.items}
-          />
-
-        ))}
-
+        <NavMain label="Menu Utama" items={menu} />
       </SidebarContent>
 
-      {/* ======================================
-          SIDEBAR FOOTER
-      ====================================== */}
+      {/* FOOTER */}
       <SidebarFooter>
-
-        <SidebarNotification />
-
-        <NavUser user={data.user} />
-
+        <NavUser user={userData} />
       </SidebarFooter>
 
     </Sidebar>

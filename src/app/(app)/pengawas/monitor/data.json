@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "namaUsaha": "PT Timor Energi",
+    "jenisKegiatan": "Pertambangan",
+    "jenisDokumen": "AMDAL",
+    "nomorDokumen": "AMDAL/2026/001",
+    "tanggalTerbit": "2026-05-10",
+    "lokasi": "-9.1012, 124.8901",
+    "jadwalPengawasan": "2026-06-01 09:00"
+  },
+  {
+    "id": 2,
+    "namaUsaha": "CV Hijau Lestari",
+    "jenisKegiatan": "Peternakan",
+    "jenisDokumen": "UKL-UPL",
+    "nomorDokumen": "UKL/2026/002",
+    "tanggalTerbit": "2026-05-08",
+    "lokasi": "-9.2001, 124.8800",
+    "jadwalPengawasan": "2026-06-02 10:30"
+  },
+  {
+    "id": 3,
+    "namaUsaha": "PT Sejahtera Abadi",
+    "jenisKegiatan": "Perkebunan",
+    "jenisDokumen": "SPPL",
+    "nomorDokumen": "SPPL/2026/003",
+    "tanggalTerbit": "2026-05-06",
+    "lokasi": "-9.1500, 124.8700",
+    "jadwalPengawasan": "2026-06-03 08:00"
+  },
+  {
+    "id": 4,
+    "namaUsaha": "CV Alam Bersih",
+    "jenisKegiatan": "Pengolahan Limbah",
+    "jenisDokumen": "AMDAL",
+    "nomorDokumen": "AMDAL/2026/004",
+    "tanggalTerbit": "2026-05-03",
+    "lokasi": "-9.3000, 124.8600",
+    "jadwalPengawasan": "2026-06-04 13:00"
+  },
+  {
+    "id": 5,
+    "namaUsaha": "PT Flores Hijau",
+    "jenisKegiatan": "Perdagangan",
+    "jenisDokumen": "UKL-UPL",
+    "nomorDokumen": "UKL/2026/005",
+    "tanggalTerbit": "2026-05-01",
+    "lokasi": "-9.2500, 124.8400",
+    "jadwalPengawasan": "2026-06-05 11:15"
+  }
+]

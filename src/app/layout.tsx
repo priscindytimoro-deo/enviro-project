@@ -6,8 +6,9 @@ import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
 
 export const metadata: Metadata = {
-  title: "Shadcn Dashboard",
-  description: "A dashboard built with Next.js and shadcn/ui",
+  title: "MONITOR PATUH - LH | Dashboard",
+  description:
+    "Sistem Monitoring Kepatuhan Lingkungan Hidup - dashboard",
 };
 
 export default function RootLayout({

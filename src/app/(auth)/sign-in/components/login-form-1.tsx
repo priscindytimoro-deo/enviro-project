@@ -22,9 +22,14 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 
+import { supabase } from "@/lib/supabase-client"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { Eye, EyeOff } from "lucide-react"
+
 const loginFormSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Email tidak valid"),
+  password: z.string().min(6, "Password minimal 6 karakter"),
 })
 
 type LoginFormValues = z.infer<typeof loginFormSchema>
@@ -33,95 +38,212 @@ export function LoginForm1({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter()
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "test@example.com",
-      password: "password",
+      email: "",
+      password: "",
     },
   })
+
+  async function onSubmit(data: LoginFormValues) {
+    setLoading(true)
+    setError("")
+
+    // LOGIN SUPABASE
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      })
+
+    if (authError || !authData.user) {
+      setError("Email atau password salah")
+      setLoading(false)
+      return
+    }
+
+    // if (authError) {
+    //   console.log(authError)
+    //   setError(authError.message)
+    //   setLoading(false)
+    //   return
+    // }
+
+    const user = authData.user
+
+    // AMBIL PROFILE
+    const { data: profile, error: profileError } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single()
+
+    if (profileError || !profile) {
+      await supabase.auth.signOut()
+      setError("Profil tidak ditemukan")
+      setLoading(false)
+      return
+    }
+
+    // CEK VERIFIKASI
+    if (profile.status_verifikasi !== "approved") {
+      await supabase.auth.signOut()
+      setError("Akun belum diverifikasi admin")
+      setLoading(false)
+      return
+    }
+
+    // CEK AKTIF
+    if (!profile.is_active) {
+      await supabase.auth.signOut()
+      setError("Akun belum aktif")
+      setLoading(false)
+      return
+    }
+
+    // REDIRECT ROLE
+  switch (profile.role) {
+    case "admin":
+      router.push("/admin/dashboard")
+      break
+
+    case "kadis":
+      router.push("/kadis/dashboard")
+      break
+
+    case "kabid":
+      router.push("/kabid/dashboard")
+      break
+
+    case "pengawas":
+      router.push("/pengawas/dashboard")
+      break
+
+    case "user":
+    default:
+      router.push("/dashboard")
+      break
+  }
+
+    setLoading(false)
+  }
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
+          <CardTitle className="text-xl">Login</CardTitle>
+          <CardDescription>Masuk ke akun Anda</CardDescription>
         </CardHeader>
+
         <CardContent>
           <Form {...form}>
-            <form action="/">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="grid gap-6">
-                <div className="grid gap-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
+
+                {/* EMAIL */}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@contoh.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* PASSWORD WITH EYE */}
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center">
+                        <FormLabel>Password</FormLabel>
+                        <a
+                          href="/forgot-password"
+                          className="ml-auto text-sm underline-offset-4 hover:underline"
+                        >
+                          Lupa password?
+                        </a>
+                      </div>
+
+                      <FormControl>
+                        <div className="relative">
                           <Input
-                            type="email"
-                            placeholder="test@example.com"
+                            type={showPassword ? "text" : "password"}
                             {...field}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center">
-                          <FormLabel>Password</FormLabel>
-                          <a
-                            href="/auth/forgot-password"
-                            className="ml-auto text-sm underline-offset-4 hover:underline"
-                          >
-                            Forgot your password?
-                          </a>
-                        </div>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full cursor-pointer">
-                    Login
-                  </Button>
 
-                  <Button variant="outline" className="w-full cursor-pointer" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path
-                        d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                    Login with Google
-                  </Button>
-                </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword(!showPassword)
+                            }
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                          >
+                            {showPassword ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* ERROR */}
+                {error && (
+                  <p className="text-sm text-red-500">
+                    {error}
+                  </p>
+                )}
+
+                {/* BUTTON */}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Loading..." : "Login"}
+                </Button>
+
+                {/* SIGN UP */}
                 <div className="text-center text-sm">
-                  Don&apos;t have an account?{" "}
-                  <a href="/auth/sign-up" className="underline underline-offset-4">
-                    Sign up
+                  Belum punya akun?{" "}
+                  <a
+                    href="/sign-up"
+                    className="underline underline-offset-4"
+                  >
+                    Daftar
                   </a>
                 </div>
+
               </div>
             </form>
           </Form>
         </CardContent>
       </Card>
-      <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </div>
     </div>
   )
 }

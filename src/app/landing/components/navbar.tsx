@@ -390,7 +390,7 @@ export function LandingNavbar() {
                       className="w-full"
                     >
                       <Link
-                        href="/auth/sign-in"
+                        href="/sign-in"
                         onClick={() => setIsOpen(false)}
                       >
                         Masuk

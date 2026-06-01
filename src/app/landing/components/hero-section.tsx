@@ -378,7 +378,7 @@ export function HeroSection() {
                   dark:hover:text-white
                 "
               >
-                <Link href="/dashboard">
+                <Link href="/sign-in">
                   Masuk
                 </Link>
               </Button>
