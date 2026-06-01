@@ -5,7 +5,7 @@ import { DataTable } from "./components/data-table"
 import initialMonitorData from "./data.json"
 
 export interface Monitoring {
-  id: number
+  id: string
   namaUsaha: string
   jenisKegiatan: string
   jenisDokumen: string
@@ -17,23 +17,26 @@ export interface Monitoring {
 
 export default function MonitorPage() {
   const [data, setData] = useState<Monitoring[]>(
-    initialMonitorData as Monitoring[]
+    (initialMonitorData as Monitoring[]) ?? []
   )
 
-  const handleAdd = (item: Monitoring) => {
+  // CREATE
+  const handleAdd = (item: Omit<Monitoring, "id">) => {
     const newItem: Monitoring = {
-      ...item,
       id: crypto.randomUUID(),
+      ...item,
     }
 
     setData((prev) => [newItem, ...prev])
   }
 
-  const handleDelete = (id: number) => {
+  // DELETE
+  const handleDelete = (id: string) => {
     setData((prev) => prev.filter((d) => d.id !== id))
   }
 
-  const handleSetJadwal = (id: number) => {
+  // SET JADWAL
+  const handleSetJadwal = (id: string) => {
     setData((prev) =>
       prev.map((d) =>
         d.id === id
@@ -68,7 +71,6 @@ export default function MonitorPage() {
           onSetJadwal={handleSetJadwal}
         />
       </div>
-
     </div>
   )
 }
