@@ -22,8 +22,8 @@ export default function MonitorPage() {
 
   const handleAdd = (item: Monitoring) => {
     const newItem: Monitoring = {
-      id: Math.max(0, ...data.map((d) => d.id)) + 1,
       ...item,
+      id: crypto.randomUUID(),
     }
 
     setData((prev) => [newItem, ...prev])
