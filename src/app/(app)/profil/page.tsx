@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -32,19 +31,22 @@ const supabase = createBrowserClient(
 export default function ProfilUsahaPage() {
   const [loading, setLoading] = useState(false)
   const [editMode, setEditMode] = useState(false)
-  const [showContinue, setShowContinue] = useState(false)
 
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [usahaProfile, setUsahaProfile] = useState<any>(null)
+
+  const [canContinue, setCanContinue] = useState(false)
 
   const [formData, setFormData] = useState({
     bentukBadanUsaha: "",
     namaUsahaInstansi: "",
     alamatUsahaInstansi: "",
     nib: "",
-    noHp: "", // ✅ TAMBAH FIELD NO HP (tetap ada di form)
+    noHp: "",
   })
+
+  const [errors, setErrors] = useState<any>({})
 
   // ======================
   // LOAD DATA
@@ -56,7 +58,6 @@ export default function ProfilUsahaPage() {
 
       setUser(auth.user)
 
-      // PROFILES
       const { data: prof } = await supabase
         .from("profiles")
         .select("nama_penanggung_jawab, no_hp")
@@ -65,7 +66,6 @@ export default function ProfilUsahaPage() {
 
       setProfile(prof)
 
-      // USAHA PROFILE
       const { data: usaha } = await supabase
         .from("usaha_profile")
         .select("*")
@@ -74,7 +74,7 @@ export default function ProfilUsahaPage() {
 
       if (usaha) {
         setUsahaProfile(usaha)
-        setShowContinue(true)
+        setCanContinue(true)
 
         setFormData({
           bentukBadanUsaha: usaha.bentuk_badan_usaha || "",
@@ -84,6 +84,8 @@ export default function ProfilUsahaPage() {
           noHp: prof?.no_hp || "",
         })
       } else {
+        setCanContinue(false)
+
         setFormData((prev) => ({
           ...prev,
           noHp: prof?.no_hp || "",
@@ -108,15 +110,38 @@ export default function ProfilUsahaPage() {
   }
 
   // ======================
+  // VALIDASI
+  // ======================
+  const validate = () => {
+    const err: any = {}
+
+    if (!formData.bentukBadanUsaha)
+      err.bentukBadanUsaha = "Wajib dipilih"
+
+    if (!formData.namaUsahaInstansi)
+      err.namaUsahaInstansi = "Wajib diisi"
+
+    if (!formData.alamatUsahaInstansi)
+      err.alamatUsahaInstansi = "Wajib diisi"
+
+    if (!isInstansi) {
+      if (!formData.nib)
+        err.nib = "NIB wajib diisi"
+      else if (formData.nib.length !== 13)
+        err.nib = "NIB harus 13 digit"
+    }
+
+    setErrors(err)
+    return Object.keys(err).length === 0
+  }
+
+  // ======================
   // SAVE
   // ======================
   const handleSubmit = async () => {
     if (!user) return
 
-    if (!isInstansi && formData.nib && formData.nib.length !== 13) {
-      alert("NIB harus 13 digit")
-      return
-    }
+    if (!validate()) return
 
     setLoading(true)
 
@@ -137,7 +162,6 @@ export default function ProfilUsahaPage() {
     setLoading(false)
 
     if (error) {
-      console.error(error)
       alert("Gagal menyimpan profil")
       return
     }
@@ -145,8 +169,14 @@ export default function ProfilUsahaPage() {
     alert("Profil berhasil disimpan")
 
     setEditMode(false)
-    setShowContinue(true)
+    setCanContinue(true)
   }
+
+  const isComplete =
+    formData.bentukBadanUsaha &&
+    formData.namaUsahaInstansi &&
+    formData.alamatUsahaInstansi &&
+    (isInstansi ? true : formData.nib?.length === 13)
 
   return (
     <div className="space-y-6 px-4 lg:px-6 py-6">
@@ -203,6 +233,9 @@ export default function ProfilUsahaPage() {
                 <SelectItem value="Instansi">Instansi</SelectItem>
               </SelectContent>
             </Select>
+            {errors.bentukBadanUsaha && (
+              <p className="text-xs text-red-500">{errors.bentukBadanUsaha}</p>
+            )}
           </div>
 
           {/* NAMA */}
@@ -215,6 +248,9 @@ export default function ProfilUsahaPage() {
               }
               disabled={!editMode && usahaProfile}
             />
+            {errors.namaUsahaInstansi && (
+              <p className="text-xs text-red-500">{errors.namaUsahaInstansi}</p>
+            )}
           </div>
 
           {/* ALAMAT */}
@@ -227,27 +263,21 @@ export default function ProfilUsahaPage() {
               }
               disabled={!editMode && usahaProfile}
             />
+            {errors.alamatUsahaInstansi && (
+              <p className="text-xs text-red-500">{errors.alamatUsahaInstansi}</p>
+            )}
           </div>
 
           {/* PENANGGUNG JAWAB */}
           <div>
             <Label>Penanggung Jawab</Label>
-            <Input
-              value={profile?.nama_penanggung_jawab || ""}
-              disabled
-            />
+            <Input value={profile?.nama_penanggung_jawab || ""} disabled />
           </div>
 
-          {/* NO HP (TETAP ADA) */}
+          {/* NO HP */}
           <div>
             <Label>No HP</Label>
-            <Input
-              value={formData.noHp}
-              onChange={(e) =>
-                handleChange("noHp", e.target.value)
-              }
-              disabled
-            />
+            <Input value={formData.noHp} disabled />
           </div>
 
           {/* NIB */}
@@ -256,20 +286,19 @@ export default function ProfilUsahaPage() {
               <Label>NIB</Label>
               <Input
                 value={formData.nib}
-                onChange={(e) =>
-                  handleNibChange(e.target.value)
-                }
+                onChange={(e) => handleNibChange(e.target.value)}
                 disabled={!editMode && usahaProfile}
-                maxLength={13}
-                inputMode="numeric"
               />
+              {errors.nib && (
+                <p className="text-xs text-red-500">{errors.nib}</p>
+              )}
             </div>
           )}
 
         </CardContent>
       </Card>
 
-      {/* ACTION BUTTONS */}
+      {/* ACTION */}
       <div className="flex justify-between">
 
         {/* SIMPAN */}
@@ -281,14 +310,23 @@ export default function ProfilUsahaPage() {
         )}
 
         {/* LANJUTKAN */}
-        {showContinue && (
-          <Button asChild>
+        <Button
+          asChild={canContinue}
+          disabled={!canContinue}
+          className={!canContinue ? "opacity-50 cursor-not-allowed" : ""}
+        >
+          {canContinue ? (
             <a href="/profil-usaha">
               Lanjutkan
               <ArrowRight className="ml-2 h-4 w-4" />
             </a>
-          </Button>
-        )}
+          ) : (
+            <span>
+              Lanjutkan
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </span>
+          )}
+        </Button>
 
       </div>
     </div>

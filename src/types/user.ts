@@ -1,20 +1,33 @@
 export interface User {
-  id: number
+  id: string
+
+  email: string
+
   name: string
   username: string
   phone: string
+
   avatar: string
+
   role: string
-  status: string
-  verificationStatus: string
+
+  is_active: boolean
+
+  verificationStatus: "approved" | "pending"
+
   createdAt: string
 }
 
 export interface UserFormValues {
+  email: string
+
   name: string
   username: string
   phone: string
+
   role: string
-  status: string
-  verificationStatus: string
+
+  is_active: boolean
+
+  verificationStatus: "approved" | "pending"
 }

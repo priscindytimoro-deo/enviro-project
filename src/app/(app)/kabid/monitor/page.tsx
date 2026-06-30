@@ -1,76 +1,86 @@
 "use client"
 
-import { useState } from "react"
-import { DataTable } from "./components/data-table"
-import initialMonitorData from "./data.json"
+import { useEffect, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
+import { MonitorTable } from "./components/data-table"
 
-export interface Monitoring {
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export interface KabidMonitor {
   id: string
+
   namaUsaha: string
   jenisKegiatan: string
-  jenisDokumen: string
-  nomorDokumen: string
-  tanggalTerbit: string
-  lokasi: string
-  jadwalPengawasan: string
+  alamatUsaha: string
+
+  waktuLapor: string
+  periodePelaporan: string
+
+  report_stage: string
+  jadwal_pengawasan: string | null
 }
 
-export default function MonitorPage() {
-  const [data, setData] = useState<Monitoring[]>(
-    (initialMonitorData as Monitoring[]) ?? []
-  )
+export default function KabidMonitorPage() {
+  const [data, setData] = useState<KabidMonitor[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // CREATE
-  const handleAdd = (item: Omit<Monitoring, "id">) => {
-    const newItem: Monitoring = {
-      id: crypto.randomUUID(),
-      ...item,
-    }
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-    setData((prev) => [newItem, ...prev])
-  }
+  const fetchData = async () => {
+    setLoading(true)
 
-  // DELETE
-  const handleDelete = (id: string) => {
-    setData((prev) => prev.filter((d) => d.id !== id))
-  }
+    const [reportsRes, profileRes, kegiatanRes] = await Promise.all([
+      supabase.from("reports").select("*"),
+      supabase.from("usaha_profile").select("*"),
+      supabase.from("usaha_kegiatan").select("*"),
+    ])
 
-  // SET JADWAL
-  const handleSetJadwal = (id: string) => {
-    setData((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? {
-              ...d,
-              jadwalPengawasan: new Date()
-                .toISOString()
-                .slice(0, 16)
-                .replace("T", " "),
-            }
-          : d
+    const reports = reportsRes.data ?? []
+    const profiles = profileRes.data ?? []
+    const kegiatan = kegiatanRes.data ?? []
+
+    const profileMap = new Map(profiles.map((p: any) => [p.id, p]))
+    const kegiatanMap = new Map(kegiatan.map((k: any) => [k.id, k]))
+
+    const result: KabidMonitor[] = reports
+      .filter((r: any) =>
+        ["pengawas_review", "admin_final_review"].includes(r.report_stage)
       )
-    )
+      .map((r: any) => {
+        const keg = kegiatanMap.get(r.usaha_kegiatan_id)
+        const prof = keg ? profileMap.get(keg.profile_id) : null
+
+        return {
+          id: r.id,
+
+          namaUsaha: prof
+            ? `${prof.bentuk_badan_usaha} ${prof.nama_usaha_instansi}`
+            : "-",
+
+          jenisKegiatan: keg
+            ? `${keg.jenis_usaha_kegiatan} - ${keg.deskripsi_kegiatan}`
+            : "-",
+
+          alamatUsaha: keg?.alamat_usaha_kegiatan ?? "-",
+
+          waktuLapor: r.created_at ?? "-",
+          periodePelaporan: r.periode_pelaporan ?? "-",
+
+          report_stage: r.report_stage ?? "-",
+          jadwal_pengawasan: r.jadwal_pengawasan ?? null,
+        }
+      })
+
+    setData(result)
+    setLoading(false)
   }
 
-  return (
-    <div className="flex flex-col gap-6">
+  if (loading) return <div className="p-6">Loading...</div>
 
-      <div className="space-y-1 px-4 lg:px-6">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Monitoring Pengawasan
-        </h1>
-        <p className="text-muted-foreground">
-          Jadwal dan data pengawasan lingkungan hidup
-        </p>
-      </div>
-
-      <div className="@container/main px-4 lg:px-6">
-        <DataTable
-          data={data}
-          onDelete={handleDelete}
-          onSetJadwal={handleSetJadwal}
-        />
-      </div>
-    </div>
-  )
+  return <MonitorTable data={data} />
 }

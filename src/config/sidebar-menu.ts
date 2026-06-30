@@ -29,7 +29,7 @@ export const adminMenu = [
     icon: ShieldCheck,
   },
   {
-    title: "Jadwal Pengawasan",
+    title: "Monitor",
     url: "/admin/monitor",
     icon: Monitor,
   },
@@ -76,14 +76,14 @@ export const kadisMenu = [
     icon: LayoutDashboard,
   },
   {
-    title: "Monitor",
-    url: "/kadis/monitor",
-    icon: Monitor,
-  },
-  {
     title: "Laporan",
     url: "/kadis/report",
     icon: FileText,
+  },
+  {
+    title: "Monitor",
+    url: "/kadis/monitor",
+    icon: Monitor,
   },
 ]
 
@@ -97,14 +97,14 @@ export const kabidMenu = [
     icon: LayoutDashboard,
   },
   {
-    title: "Monitor",
-    url: "/kabid/monitor",
-    icon: Monitor,
-  },
-  {
     title: "Laporan",
     url: "/kabid/report",
     icon: FileText,
+  },
+  {
+    title: "Monitor",
+    url: "/kabid/monitor",
+    icon: Monitor,
   },
 ]
 
@@ -118,13 +118,13 @@ export const pengawasMenu = [
     icon: LayoutDashboard,
   },
   {
-    title: "Monitor",
-    url: "/pengawas/monitor",
-    icon: Monitor,
-  },
-  {
     title: "Laporan",
     url: "/pengawas/report",
     icon: FileText,
+  },
+  {
+    title: "Monitor",
+    url: "/pengawas/monitor",
+    icon: Monitor,
   },
 ]

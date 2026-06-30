@@ -1,87 +1,147 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
 import { DataTable } from "./components/data-table"
-import initialReportData from "./data.json"
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export interface Laporan {
-  id: number
-  namaUsaha: string
-  jenisKegiatan: string
-  jenisDokumen: string
-  nomorDokumen: string
-  tanggalTerbit: string
-  waktuLapor: string
-  lokasi: string
-  linkDokumen: string
-  status: string
-}
+  id: string
 
-export interface LaporanFormValues {
   namaUsaha: string
   jenisKegiatan: string
+  alamatUsaha: string
+
   jenisDokumen: string
   nomorDokumen: string
   tanggalTerbit: string
-  lokasi: string
   linkDokumen: string
-  status: string
+
+  waktuLapor: string
+  periodePelaporan: string
+
+  statusUser: string
+  catatan_verifikasi: string
+
+  report_stage: string
+  catatan_review: string
 }
 
 export default function ReportPage() {
-  const [reports, setReports] = useState<Laporan[]>(
-    initialReportData as Laporan[]
-  )
+  const [reports, setReports] = useState<Laporan[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleAddReport = (data: LaporanFormValues) => {
-    const newReport: Laporan = {
-      id: Math.max(0, ...reports.map((r) => r.id)) + 1,
-      ...data,
-      waktuLapor: new Date().toISOString().slice(0, 16).replace("T", " ")
-    }
+  const fetchReports = async () => {
+    setLoading(true)
 
-    setReports((prev) => [newReport, ...prev])
+    const [reportsRes, profileRes, kegiatanRes] = await Promise.all([
+      supabase
+        .from("reports")
+        .select("*")
+        .eq("report_stage", "admin_review") // ⭐ FILTER UTAMA
+        .order("created_at", { ascending: false }),
+
+      supabase.from("usaha_profile").select("*"),
+      supabase.from("usaha_kegiatan").select("*"),
+    ])
+
+    const reportsData = reportsRes.data ?? []
+    const profileData = profileRes.data ?? []
+    const kegiatanData = kegiatanRes.data ?? []
+
+    const profileMap = new Map(profileData.map((p: any) => [p.id, p]))
+    const kegiatanMap = new Map(kegiatanData.map((k: any) => [k.id, k]))
+
+    const hasil: Laporan[] = reportsData.map((report: any) => {
+      const kegiatan = kegiatanMap.get(report.usaha_kegiatan_id)
+      const profile = kegiatan
+        ? profileMap.get(kegiatan.profile_id)
+        : null
+
+      return {
+        id: report.id,
+
+        namaUsaha: profile
+          ? `${profile.bentuk_badan_usaha} ${profile.nama_usaha_instansi}`
+          : "-",
+
+        jenisKegiatan: kegiatan
+          ? `${kegiatan.jenis_usaha_kegiatan} - ${kegiatan.deskripsi_kegiatan}`
+          : "-",
+
+        alamatUsaha: kegiatan
+          ? `${kegiatan.alamat_usaha_kegiatan ?? "-"}`
+          : "-",
+
+        jenisDokumen: report.jenis_dokumen ?? "-",
+        nomorDokumen: report.nomor_dokumen ?? "-",
+        tanggalTerbit: report.tanggal_terbit ?? "-",
+        linkDokumen: report.link_dokumen ?? "#",
+
+        waktuLapor: report.created_at ?? "-",
+        periodePelaporan: report.periode_pelaporan ?? "-",
+
+        statusUser: report.status_verifikasi ?? "-",
+        catatan_verifikasi: report.catatan_verifikasi ?? "-",
+
+        report_stage: report.report_stage ?? "admin_review",
+        catatan_review: report.catatan_review ?? "-",
+      }
+    })
+
+    setReports(hasil)
+    setLoading(false)
   }
 
-  const handleDeleteReport = (id: number) => {
+  useEffect(() => {
+    fetchReports()
+  }, [])
+
+  const handleNextStage = async (id: string) => {
+    const flow: Record<string, string> = {
+      admin_review: "kadis_review",
+    }
+
+    await supabase
+      .from("reports")
+      .update({
+        report_stage: flow["admin_review"],
+      })
+      .eq("id", id)
+
+    fetchReports()
+  }
+
+  const handleDelete = async (id: string) => {
+    const ok = confirm("Hapus laporan?")
+    if (!ok) return
+
+    await supabase.from("reports").delete().eq("id", id)
     setReports((prev) => prev.filter((r) => r.id !== id))
   }
 
-  const handleApprove = (id: number) => {
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: "Disetujui" } : r
-      )
-    )
-  }
-
-  const handleAuditKadis = (id: number) => {
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: "Audit Kadis" } : r
-      )
-    )
+  if (loading) {
+    return <div className="p-6">Loading...</div>
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="space-y-1 px-4 lg:px-6">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Manajemen Laporan
-        </h1>
-        <p className="text-muted-foreground">
-          Kelola laporan dokumen lingkungan hidup
-        </p>
-      </div>
+    <div className="p-6 space-y-4">
 
-      <div className="@container/main px-4 lg:px-6">
-        <DataTable
-          data={reports}
-          onApprove={handleApprove}
-          onAuditKadis={handleAuditKadis}
-          onDelete={handleDeleteReport}
-        />
-      </div>
+      <h1 className="text-2xl font-bold">
+        Laporan Admin Review
+      </h1>
+
+      <DataTable
+        data={reports}
+        onNextStage={handleNextStage}
+        onDelete={handleDelete}
+        onRefresh={fetchReports}
+      />
+
     </div>
   )
 }

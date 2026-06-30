@@ -5,28 +5,19 @@ import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-
-// =========================
-// TYPE
-// =========================
-interface Profile {
-  id: string
-  nama_penanggung_jawab: string
-  no_hp: string
-}
+import { Badge } from "@/components/ui/badge"
 
 export default function DashboardUser() {
-
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [usahaProfile, setUsahaProfile] = useState<any>(null)
   const [usahaList, setUsahaList] = useState<any[]>([])
+  const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // =========================
-  // LOAD ALL DATA
+  // FETCH DATA (SAFE VERSION)
   // =========================
   const fetchData = async () => {
-
     setLoading(true)
 
     const { data: auth } = await supabase.auth.getUser()
@@ -36,31 +27,48 @@ export default function DashboardUser() {
       return
     }
 
-    // 1. PROFILE
+    const userId = auth.user.id
+
+    // PROFILE
     const { data: prof } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", auth.user.id)
+      .eq("id", userId)
       .single()
 
     setProfile(prof)
 
-    // 2. USAHA PROFILE
+    // USAHA PROFILE
     const { data: usahaProf } = await supabase
       .from("usaha_profile")
       .select("*")
-      .eq("user_id", auth.user.id)
+      .eq("user_id", userId)
       .maybeSingle()
 
     setUsahaProfile(usahaProf)
 
-    // 3. USAHA LIST
-    const { data: usaha } = await supabase
-      .from("usaha_kegiatan")
-      .select("*")
-      .eq("profile_id", auth.user.id)
+    // USAHA LIST (SAFE)
+    let usahaData: any[] = []
 
-    setUsahaList(usaha || [])
+    if (usahaProf?.id) {
+      const { data: usaha } = await supabase
+        .from("usaha_kegiatan")
+        .select("*")
+        .eq("profile_id", usahaProf.id)
+
+      usahaData = usaha || []
+    }
+
+    setUsahaList(usahaData)
+
+    // REPORTS
+    const { data: rep } = await supabase
+      .from("reports")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    setReports(rep || [])
 
     setLoading(false)
   }
@@ -70,24 +78,65 @@ export default function DashboardUser() {
   }, [])
 
   // =========================
-  // STATUS LOGIC
+  // STEP LOGIC (IMPROVED)
   // =========================
-  const isProfileComplete =
-    !!profile?.nama_penanggung_jawab &&
-    !!profile?.no_hp
+  const steps = [
+    {
+      label: "Profil User",
+      done: !!profile?.nama_penanggung_jawab && !!profile?.no_hp,
+      link: "/profil",
+    },
+    {
+      label: "Profil Usaha",
+      done: !!usahaProfile?.id,
+      link: "/profil",
+    },
+    {
+      label: "Usaha/Kegiatan",
+      done: usahaList.length > 0,
+      link: "/profil-usaha",
+    },
+    {
+      label: "Laporan",
+      done: reports.length > 0,
+      link: "/buat-laporan",
+    },
+  ]
 
-  const isUsahaComplete = !!usahaProfile
+  const completed = steps.filter((s) => s.done).length
+  const progress = Math.round((completed / steps.length) * 100)
 
-  const isUsahaKegiatanComplete = usahaList.length > 0
+  // =========================
+  // COMPLIANCE FIX (REAL)
+  // =========================
+  const usahaWithReportStatus = usahaList.map((usaha) => {
+    const relatedReports = reports.filter(
+      (r) => r.usaha_kegiatan_id === usaha.id
+    )
 
-  const progress =
-    (Number(isProfileComplete) +
-      Number(isUsahaComplete) +
-      Number(isUsahaKegiatanComplete)) * 33
+    const latest = relatedReports[0]
+
+    return {
+      ...usaha,
+      sudahDilaporkan: relatedReports.length > 0,
+      statusLaporan: latest?.status_verifikasi || "-",
+    }
+  })
+
+  const usahaSudahDilaporkan = usahaWithReportStatus.filter(
+    (u) => u.sudahDilaporkan
+  ).length
+
+  const complianceRate =
+    usahaList.length === 0
+      ? 0
+      : Math.round((usahaSudahDilaporkan / usahaList.length) * 100)
+
+  const latestReport = reports[0]
 
   if (loading) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
+      <div className="p-6 text-muted-foreground">
         Memuat dashboard...
       </div>
     )
@@ -103,80 +152,147 @@ export default function DashboardUser() {
         </h1>
 
         <p className="text-muted-foreground">
-          Progress kelengkapan Anda: {progress}%
+          Progress: {progress}% • Kepatuhan: {complianceRate}%
         </p>
       </div>
 
-      {/* PROGRESS CARD */}
+      {/* STEP PROGRESS */}
       <Card>
-        <CardContent className="p-6 space-y-3">
+        <CardHeader>
+          <CardTitle>Progress Sistem</CardTitle>
+        </CardHeader>
 
-          <p>Profil: {isProfileComplete ? "✔" : "❌"}</p>
-          <p>Data Usaha/Kegiatan: {isUsahaComplete ? "✔" : "❌"}</p>
-          <p>Jenis Usaha: {isUsahaKegiatanComplete ? "✔" : "❌"}</p>
+        <CardContent className="space-y-3">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className="flex justify-between border rounded-lg p-3"
+            >
+              <div className="flex gap-3 items-center">
+                <div
+                  className={`w-8 h-8 flex items-center justify-center rounded-full text-white ${
+                    step.done ? "bg-green-500" : "bg-gray-300"
+                  }`}
+                >
+                  {i + 1}
+                </div>
 
+                <div>
+                  <p className="font-medium">{step.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {step.done ? "Selesai" : "Belum"}
+                  </p>
+                </div>
+              </div>
+
+              {!step.done && (
+                <Link href={step.link}>
+                  <Button size="sm">Lengkapi</Button>
+                </Link>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      {/* ALERT */}
-      {progress < 100 && (
-        <Card className="border-yellow-300 bg-yellow-50">
-          <CardContent className="p-5 space-y-2">
+      {/* KPI */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tingkat Kepatuhan</CardTitle>
+        </CardHeader>
 
-            <p className="font-semibold">
-              ⚠ Data belum lengkap
+        <CardContent>
+          <p className="text-3xl font-bold">{complianceRate}%</p>
+
+          <p className="text-sm text-muted-foreground">
+            {usahaSudahDilaporkan} dari {usahaList.length} usaha sudah dilaporkan
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* STATUS USAHA */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Status Usaha & Laporan</CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          {usahaWithReportStatus.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada usaha/kegiatan
             </p>
+          ) : (
+            usahaWithReportStatus.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between border rounded-lg p-3"
+              >
+                <div>
+                  <p className="font-medium">
+                    {item.jenis_usaha_kegiatan}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    KBLI: {item.kbli}
+                  </p>
+                </div>
 
-            <p className="text-sm">
-              Lengkapi semua tahap untuk bisa membuat laporan
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      item.sudahDilaporkan
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {item.sudahDilaporkan
+                      ? item.statusLaporan
+                      : "Belum Dilaporkan"}
+                  </span>
+
+                  {!item.sudahDilaporkan && (
+                    <Link href="/buat-laporan">
+                      <Button size="sm">Lapor</Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* TIMELINE */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Timeline Laporan Terbaru</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {latestReport ? (
+            <div className="text-sm space-y-2">
+              <p>
+                📄 Status: <b>{latestReport.status_verifikasi}</b>
+              </p>
+
+              <p className="text-muted-foreground">
+                Draft → Proses → Verifikasi → Selesai
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Belum ada laporan
             </p>
+          )}
+        </CardContent>
+      </Card>
 
-            <Link href="/profil">
-              <Button>Mulai Lengkapi</Button>
-            </Link>
-
-          </CardContent>
-        </Card>
-      )}
-
-      {/* QUICK ACTION */}
-      <div className="grid md:grid-cols-3 gap-4">
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/profil">
-              <Button className="w-full">Isi Profil</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Usaha</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/profil-usaha">
-              <Button className="w-full">Data Usaha</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Laporan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/buat-laporan">
-              <Button className="w-full" disabled={progress < 100}>
-                Buat Laporan
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
+      {/* CTA */}
+      <div className="flex justify-end">
+        <Link href="/buat-laporan">
+          <Button disabled={progress < 100}>
+            Buat Laporan
+          </Button>
+        </Link>
       </div>
 
     </div>

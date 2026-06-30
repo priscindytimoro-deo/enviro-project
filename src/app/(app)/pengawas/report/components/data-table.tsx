@@ -1,21 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Search } from "lucide-react"
+import type { PengawasLaporan } from "../page"
 
 import {
   Table,
@@ -26,6 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,205 +24,212 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { EllipsisVertical } from "lucide-react"
+import { createBrowserClient } from "@supabase/ssr"
 
-import type { Laporan } from "../page"
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Props {
-  data: Laporan[]
-  onApprove: (id: number) => void
-  onAuditKadis: (id: number) => void
-  onDelete: (id: number) => void
+  data: PengawasLaporan[]
+  refresh: () => void
 }
 
-export function DataTable({
-  data,
-  onApprove,
-  onAuditKadis,
-  onDelete,
-}: Props) {
-  const [globalFilter, setGlobalFilter] = useState("")
+export function DataTable({ data, refresh }: Props) {
+  const [openJadwal, setOpenJadwal] = useState<string | null>(null)
+  const [openApprove, setOpenApprove] = useState<string | null>(null)
 
-  const columns: ColumnDef<Laporan>[] = [
-    {
-      accessorKey: "namaUsaha",
-      header: "Nama Usaha/Instansi",
-    },
-    {
-      accessorKey: "jenisKegiatan",
-      header: "Jenis Kegiatan",
-    },
-    {
-      accessorKey: "jenisDokumen",
-      header: "Jenis Dokumen",
-    },
-    {
-      accessorKey: "nomorDokumen",
-      header: "Nomor Dokumen",
-    },
-    {
-      accessorKey: "tanggalTerbit",
-      header: "Tanggal Terbit",
-    },
-    {
-      accessorKey: "lokasi",
-      header: "Lokasi (Koordinat)",
-    },
-    {
-      accessorKey: "linkDokumen",
-      header: "Link Dokumen",
-      cell: ({ row }) => (
-        <a
-          href={row.getValue("linkDokumen")}
-          target="_blank"
-          className="text-blue-600 underline"
-        >
-          Lihat
-        </a>
-      ),
-    },
-    {
-      accessorKey: "waktuLapor",
-      header: "Waktu/Tgl Lapor",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue("status")}</Badge>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => {
-        const item = row.original
+  const [tanggal, setTanggal] = useState("")
+  const [catatan, setCatatan] = useState("")
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <EllipsisVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+  // =========================
+  // ATUR JADWAL
+  // =========================
+  const handleJadwal = async (id: string) => {
+    if (!tanggal) return alert("Tanggal wajib diisi")
 
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onApprove(item.id)}>
-                Approve
-              </DropdownMenuItem>
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        jadwal_pengawasan: tanggal,
+        report_stage: "pengawasan_dijadwalkan",
+      })
+      .eq("id", id)
 
-              <DropdownMenuItem onClick={() => onAuditKadis(item.id)}>
-                Audit Kadis
-              </DropdownMenuItem>
+    if (error) return alert("Gagal menyimpan jadwal")
 
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDelete(item.id)}
-              >
-                Hapus
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ]
+    alert("Jadwal berhasil dibuat")
+    setOpenJadwal(null)
+    setTanggal("")
+    refresh()
+  }
 
-  const table = useReactTable({
-    data: data ?? [],
-    columns,
+  // =========================
+  // APPROVE
+  // =========================
+  const handleApprove = async (id: string) => {
+    if (!catatan.trim()) {
+      alert("Catatan wajib diisi")
+      return
+    }
 
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        catatan_review: catatan,   // ✅ FIX DI SINI
+        report_stage: "laporan_disetujui",
+      })
+      .eq("id", id)
 
-    state: {
-      globalFilter,
-    },
+    if (error) {
+      alert("Gagal approve laporan")
+      return
+    }
 
-    onGlobalFilterChange: setGlobalFilter,
-  })
+    alert("Laporan berhasil disetujui")
+
+    setOpenApprove(null)
+    setCatatan("")
+    refresh()
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="border rounded-lg overflow-auto">
 
-      {/* SEARCH */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Cari laporan..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-        />
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nama Usaha</TableHead>
+            <TableHead>Jenis Kegiatan</TableHead>
+            <TableHead>Alamat</TableHead>
+            <TableHead>Link</TableHead>
+            <TableHead>Waktu Lapor</TableHead>
+            <TableHead>Periode</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Jadwal Pengawasan</TableHead>
+            <TableHead>Aksi</TableHead>
+          </TableRow>
+        </TableHeader>
 
-      {/* TABLE */}
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
-                {hg.headers.map((h) => (
-                  <TableHead key={h.id}>
-                    {flexRender(
-                      h.column.columnDef.header,
-                      h.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
+        <TableBody>
+          {data.map((item) => (
+            <TableRow key={item.id}>
 
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center h-24"
-                >
-                  Tidak ada data laporan
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              <TableCell>{item.namaUsaha}</TableCell>
+              <TableCell>{item.jenisKegiatan}</TableCell>
+              <TableCell>{item.alamatUsaha}</TableCell>
 
-      {/* PAGINATION */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Prev
-        </Button>
+              <TableCell>
+                <a href={item.linkDokumen} className="text-blue-600 underline">
+                  Lihat
+                </a>
+              </TableCell>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
+              <TableCell>
+                {item.waktuLapor !== "-"
+                  ? new Date(item.waktuLapor).toLocaleString("id-ID")
+                  : "-"}
+              </TableCell>
+
+              <TableCell>{item.periodePelaporan}</TableCell>
+
+              <TableCell>
+                <Badge>{item.report_stage}</Badge>
+              </TableCell>
+
+              <TableCell>
+                {item.jadwal_pengawasan
+                  ? new Date(item.jadwal_pengawasan).toLocaleString("id-ID")
+                  : "-"}
+              </TableCell>
+
+              {/* ACTION */}
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <EllipsisVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end">
+
+                    <DropdownMenuItem onClick={() => setOpenJadwal(item.id)}>
+                      Atur Jadwal Pengawasan
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => setOpenApprove(item.id)}>
+                      Approve Laporan
+                    </DropdownMenuItem>
+
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* =========================
+          MODAL JADWAL
+      ========================= */}
+      {openJadwal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-4 rounded w-[350px] space-y-3">
+
+            <h2 className="font-semibold">Atur Jadwal</h2>
+
+            <input
+              type="date"
+              className="border p-2 w-full"
+              onChange={(e) => setTanggal(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenJadwal(null)}>
+                Batal
+              </Button>
+
+              <Button onClick={() => handleJadwal(openJadwal)}>
+                Simpan
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* =========================
+          MODAL APPROVE
+      ========================= */}
+      {openApprove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-4 rounded w-[400px] space-y-3">
+
+            <h2 className="font-semibold">Approve Laporan</h2>
+
+            <Textarea
+              placeholder="Catatan pengawas"
+              value={catatan}
+              onChange={(e) => setCatatan(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenApprove(null)}>
+                Batal
+              </Button>
+
+              <Button onClick={() => handleApprove(openApprove)}>
+                Approve
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

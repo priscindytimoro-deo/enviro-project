@@ -1,19 +1,7 @@
 "use client"
 
-import { useState } from "react"
-
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useMemo, useState } from "react"
+import type { Laporan } from "../page"
 
 import {
   Table,
@@ -25,148 +13,321 @@ import {
 } from "@/components/ui/table"
 
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { EllipsisVertical, Search } from "lucide-react"
-import type { Monitoring } from "../page"
+import { EllipsisVertical } from "lucide-react"
 
 interface Props {
-  data: Monitoring[]
-  onDelete: (id: string) => void
-  onSetJadwal: (id: string) => void
+  data: Laporan[]
+  statusFilter: string
+  setStatusFilter: (val: string) => void
+  onNextStage: (id: string, action?: string, payload?: any) => void
 }
 
-export function DataTable({ data = [], onDelete, onSetJadwal }: Props) {
-  const [globalFilter, setGlobalFilter] = useState("")
+const STATUS_LIST = [
+  "all",
+  "kadis_review",
+  "kabid_review",
+  "pengawas_review",
+  "pengawasan_dijadwalkan",
+  "laporan_disetujui",
+  "done",
+]
 
-  const columns: ColumnDef<Monitoring>[] = [
-    { accessorKey: "namaUsaha", header: "Nama Usaha/Instansi" },
-    { accessorKey: "jenisKegiatan", header: "Jenis Kegiatan" },
-    { accessorKey: "jenisDokumen", header: "Jenis Dokumen" },
-    { accessorKey: "nomorDokumen", header: "Nomor Dokumen" },
-    { accessorKey: "tanggalTerbit", header: "Tanggal Terbit" },
-    { accessorKey: "lokasi", header: "Lokasi (Koordinat)" },
+export function DataTable({
+  data,
+  statusFilter,
+  setStatusFilter,
+  onNextStage,
+}: Props) {
 
-    {
-      accessorKey: "jadwalPengawasan",
-      header: "Jadwal Pengawasan",
-      cell: ({ row }) => (
-        <Badge variant="outline">
-          {row.getValue("jadwalPengawasan") || "-"}
-        </Badge>
-      ),
-    },
+  const filteredData = useMemo(() => {
+    if (statusFilter === "all") return data
+    return data.filter((item) => item.report_stage === statusFilter)
+  }, [data, statusFilter])
 
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => {
-        const item = row.original
+  const getLabel = (status: string) => {
+    switch (status) {
+      case "kadis_review": return "Kadis Review"
+      case "kabid_review": return "Kabid Review"
+      case "pengawas_review": return "Pengawas Review"
+      case "pengawasan_dijadwalkan": return "Dijadwalkan"
+      case "laporan_disetujui": return "Disetujui"
+      case "done": return "Selesai"
+      default: return status
+    }
+  }
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <EllipsisVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+  const getColor = (status: string) => {
+    switch (status) {
+      case "laporan_disetujui":
+        return "bg-green-100 text-green-700"
+      case "pengawasan_dijadwalkan":
+        return "bg-blue-100 text-blue-700"
+      case "pengawas_review":
+        return "bg-yellow-100 text-yellow-700"
+      case "kabid_review":
+        return "bg-orange-100 text-orange-700"
+      case "kadis_review":
+        return "bg-gray-200 text-gray-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
 
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onSetJadwal(item.id)}>
-                Set Jadwal
-              </DropdownMenuItem>
+  const [modal, setModal] = useState<null | {
+    type: "catatan" | "jadwal" | "approve"
+    id: string
+    action?: string
+  }>(null)
 
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDelete(item.id)}
-              >
-                Hapus
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ]
-
-  const table = useReactTable({
-    data: data ?? [],
-    columns,
-
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-
-    state: {
-      globalFilter,
-    },
-
-    onGlobalFilterChange: setGlobalFilter,
-  })
+  const [catatan, setCatatan] = useState("")
+  const [tanggal, setTanggal] = useState("")
 
   return (
     <div className="space-y-4">
 
-      {/* SEARCH */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Cari data monitoring..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-        />
+      {/* FILTER */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_LIST.map((status) => (
+          <Button
+            key={status}
+            size="sm"
+            variant={statusFilter === status ? "default" : "outline"}
+            onClick={() => setStatusFilter(status)}
+          >
+            {status === "all" ? "Semua" : getLabel(status)}
+          </Button>
+        ))}
       </div>
 
       {/* TABLE */}
-      <div className="rounded-lg border overflow-hidden">
+      <div className="border rounded-lg overflow-auto">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
-                {hg.headers.map((h) => (
-                  <TableHead key={h.id}>
-                    {flexRender(h.column.columnDef.header, h.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              <TableHead>Nama Usaha</TableHead>
+              <TableHead>Jenis Kegiatan</TableHead>
+              <TableHead>Alamat</TableHead>
+              <TableHead>Waktu Lapor</TableHead>
+              <TableHead>Periode</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Jadwal Pengawasan</TableHead>
+              <TableHead>Aksi</TableHead>
+            </TableRow>
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+            {filteredData.length > 0 ? (
+              filteredData.map((item) => (
+                <TableRow key={item.id}>
+
+                  <TableCell>{item.namaUsaha}</TableCell>
+                  <TableCell>{item.jenisKegiatan}</TableCell>
+                  <TableCell>{item.alamatUsaha}</TableCell>
+
+                  <TableCell>
+                    {item.waktuLapor !== "-"
+                      ? new Date(item.waktuLapor).toLocaleString("id-ID")
+                      : "-"}
+                  </TableCell>
+
+                  <TableCell>{item.periodePelaporan}</TableCell>
+
+                  <TableCell>
+                    <Badge className={getColor(item.report_stage)}>
+                      {getLabel(item.report_stage)}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    {item.jadwal_pengawasan
+                      ? new Date(item.jadwal_pengawasan).toLocaleString("id-ID")
+                      : "-"}
+                  </TableCell>
+
+                  {/* ACTION */}
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <EllipsisVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+
+                        <DropdownMenuContent align="end">
+
+                          {/* ================= KADIS ================= */}
+                          <DropdownMenuItem
+                            disabled={item.report_stage !== "kadis_review"}
+                            onClick={() =>
+                              setModal({ type: "catatan", id: item.id })
+                            }
+                          >
+                            Kirim ke Kabid
+                          </DropdownMenuItem>
+
+                          {/* ================= KABID ================= */}
+                          <DropdownMenuItem
+                            disabled={item.report_stage !== "kabid_review"}
+                            onClick={() =>
+                              setModal({ type: "catatan", id: item.id })
+                            }
+                          >
+                            Kirim ke Pengawas
+                          </DropdownMenuItem>
+
+                          {/* ================= PENGAWAS JADWAL ================= */}
+                          <DropdownMenuItem
+                            disabled={item.report_stage !== "pengawas_review"}
+                            onClick={() =>
+                              setModal({ type: "jadwal", id: item.id, action: "jadwal" })
+                            }
+                          >
+                            Atur Jadwal Pengawasan
+                          </DropdownMenuItem>
+
+                          {/* ================= PENGAWAS APPROVE ================= */}
+                          <DropdownMenuItem
+                            disabled={item.report_stage !== "pengawas_review"}
+                            onClick={() =>
+                              setModal({ type: "approve", id: item.id, action: "approve" })
+                            }
+                          >
+                            Approve Laporan
+                          </DropdownMenuItem>
+
+                          {/* ================= DONE ================= */}
+                          <DropdownMenuItem
+                            disabled={item.report_stage !== "laporan_disetujui"}
+                          >
+                            Selesai
+                          </DropdownMenuItem>
+
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center h-24">
-                  Tidak ada data monitoring
+                <TableCell colSpan={8} className="text-center py-8">
+                  Tidak ada data
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
+        <Dialog open={!!modal} onOpenChange={() => setModal(null)}>
+            <DialogContent>
 
-      {/* PAGINATION */}
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()}>
-          Next
-        </Button>
+              <DialogHeader>
+                <DialogTitle>
+                  {modal?.type === "catatan" && "Masukkan Catatan"}
+                  {modal?.type === "jadwal" && "Atur Jadwal Pengawasan"}
+                  {modal?.type === "approve" && "Approve Laporan"}
+                </DialogTitle>
+              </DialogHeader>
+
+              {/* ================= CATATAN ================= */}
+              {modal?.type === "catatan" && (
+                <Textarea
+                  placeholder="Tulis catatan..."
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                />
+              )}
+
+              {/* ================= JADWAL ================= */}
+              {modal?.type === "jadwal" && (
+                <div className="space-y-3">
+                  <Input
+                    type="datetime-local"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                  />
+
+                  <Textarea
+                    placeholder="Catatan jadwal..."
+                    value={catatan}
+                    onChange={(e) => setCatatan(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* ================= APPROVE ================= */}
+              {modal?.type === "approve" && (
+                <Textarea
+                  placeholder="Catatan approve..."
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                />
+              )}
+
+              {/* ================= BUTTON ================= */}
+              <div className="flex justify-end gap-2 pt-4">
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setModal(null)
+                    setCatatan("")
+                    setTanggal("")
+                  }}
+                >
+                  Batal
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    if (!modal) return
+
+                    if (modal.type === "catatan") {
+                      onNextStage(modal.id, undefined, { catatan })
+                    }
+
+                    if (modal.type === "jadwal") {
+                      onNextStage(modal.id, "jadwal", {
+                        tanggal,
+                        catatan
+                      })
+                    }
+
+                    if (modal.type === "approve") {
+                      onNextStage(modal.id, "approve", { catatan })
+                    }
+
+                    setModal(null)
+                    setCatatan("")
+                    setTanggal("")
+                  }}
+                >
+                  Simpan
+                </Button>
+
+              </div>
+
+            </DialogContent>
+          </Dialog>
       </div>
     </div>
   )

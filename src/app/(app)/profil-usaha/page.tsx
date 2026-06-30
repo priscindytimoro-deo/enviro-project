@@ -3,19 +3,13 @@
 import { useEffect, useState } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 
-import { Plus, Save, Trash2, Pencil, FileText } from "lucide-react"
+import { Save, Trash2, Pencil, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 
 import {
   Dialog,
@@ -41,337 +35,371 @@ interface Usaha {
   jenis_usaha_kegiatan: string
   deskripsi_kegiatan: string
   kbli: string
+  alamat_usaha_kegiatan: string
   koordinat_lokasi: string
+
+  hasReport?: boolean
 }
 
 export default function JenisUsahaPage() {
 
-const [list, setList] = useState<Usaha[]>([])
-const [user, setUser] = useState<any>(null)
+  const [list, setList] = useState<Usaha[]>([])
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loadingPage, setLoadingPage] = useState(true)
+  const [profileReady, setProfileReady] = useState(false)
+  const [nameExists, setNameExists] = useState(false)
+  const [checkingName, setCheckingName] = useState(false)
 
-const [profile, setProfile] = useState<any>(null)
+  const checkNamaUsaha = async (nama: string) => {
+  if (!nama || !profile?.id) return
 
-// id dari tabel usaha_profile
-const [usahaProfile, setUsahaProfile] = useState<any>(null)
+  setCheckingName(true)
 
-const [form, setForm] = useState({
-  jenis: "",
-  deskripsi: "",
-  kbli: "",
-  koordinat: "",
-})
+  const { data } = await supabase
+      .from("usaha_kegiatan")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .ilike("jenis_usaha_kegiatan", nama)
+
+    setNameExists((data?.length ?? 0) > 0)
+
+    setCheckingName(false)
+  }
+
+  const [form, setForm] = useState({
+    jenis: "",
+    deskripsi: "",
+    kbli: "",
+    alamat: "",
+    latitude: "",
+    longitude: "",
+  })
 
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<any>({})
 
   // ======================================
-  // LOAD USER + PROFILE + DATA
+  // LOAD DATA
   // ======================================
  useEffect(() => {
-  const load = async () => {
-    try {
-      // USER LOGIN
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+    const load = async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser()
 
-      if (!user) return
+        if (!auth?.user) {
+          setLoadingPage(false)
+          return
+        }
 
-      setUser(user)
+        setUser(auth.user)
 
-      // ==========================
-      // AMBIL DATA USAHA PROFILE
-      // ==========================
-      const {
-        data: usahaProfile,
-        error: profileError,
-      } = await supabase
-        .from("usaha_profile")
-        .select("*")
-        .eq("user_id", user.id)
-        .single()
+        const { data: usahaProfile } = await supabase
+          .from("usaha_profile")
+          .select("*")
+          .eq("user_id", auth.user.id)
+          .maybeSingle()
 
-      if (profileError) {
-        console.error("USAHA PROFILE ERROR:", profileError)
-        return
+        // BELUM ADA PROFIL
+        if (!usahaProfile) {
+          setProfile(null)
+          setProfileReady(false)
+          setList([])
+          setLoadingPage(false)
+          return
+        }
+
+        setProfile(usahaProfile)
+        setProfileReady(true)
+
+        const { data: kegiatan } = await supabase
+          .from("usaha_kegiatan")
+          .select(`
+            *,
+            reports:reports(id)
+          `)
+          .eq("profile_id", usahaProfile.id)
+          .order("created_at", {
+            ascending: false,
+          })
+
+        const mapped = (kegiatan || []).map((item) => ({
+          ...item,
+          hasReport: (item.reports?.length ?? 0) > 0,
+        }))
+
+        setList(mapped)
+      } finally {
+        setLoadingPage(false)
       }
-
-      setProfile(usahaProfile)
-
-      // ==========================
-      // AMBIL DATA USAHA KEGIATAN
-      // ==========================
-      const {
-        data: kegiatan,
-        error: kegiatanError,
-      } = await supabase
-        .from("usaha_kegiatan")
-        .select("*")
-        .eq("profile_id", usahaProfile.id)
-        .order("created_at", { ascending: false })
-
-      if (kegiatanError) {
-        console.error("KEGIATAN ERROR:", kegiatanError)
-        return
-      }
-
-      setList(kegiatan || [])
-    } catch (err) {
-      console.error("LOAD ERROR:", err)
     }
-  }
 
-  load()
-}, [])
+    load()
+  }, [])
 
   // ======================================
-  // INPUT
+  // GPS LOCATION
   // ======================================
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  // KBLI max 5 digit
-  const handleKbliChange = (value: string) => {
-    const clean = value.replace(/\D/g, "")
-    if (clean.length <= 5) {
-      setForm((p) => ({ ...p, kbli: clean }))
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("GPS tidak didukung browser")
+      return
     }
-  }
 
-  // koordinat valid
-  const handleKoordinatChange = (value: string) => {
-    const clean = value.replace(/[^0-9\s\-.]/g, "")
-    setForm((p) => ({ ...p, koordinat: clean }))
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setForm((p) => ({
+        ...p,
+        latitude: pos.coords.latitude.toString(),
+        longitude: pos.coords.longitude.toString(),
+      }))
+    })
   }
 
   // ======================================
   // SAVE
   // ======================================
-const handleSave = async () => {
-  if (!user) {
-    alert("User belum siap")
-    return
-  }
+  const handleSave = async () => {
+    if (!user) return
 
-  if (
-    !form.jenis ||
-    !form.deskripsi ||
-    !form.kbli ||
-    !form.koordinat
-  ) {
-    alert("Semua field wajib diisi")
-    return
-  }
+    setLoading(true)
+    setErrors({})
 
-  setLoading(true)
+    const newErrors: any = {}
 
-  try {
+    if (!form.jenis)
+      newErrors.jenis = "Nama usaha wajib diisi"
 
-    // ==========================
-    // AMBIL ID usaha_profile
-    // ==========================
-    const { data: usahaProfile, error: profileError } =
-      await supabase
+    if (!form.deskripsi)
+      newErrors.deskripsi = "Deskripsi wajib diisi"
+    else if (form.deskripsi.length > 500)
+      newErrors.deskripsi = "Maksimal 500 karakter"
+
+    if (!form.kbli)
+      newErrors.kbli = "KBLI wajib diisi"
+    else if (!/^\d{1,5}$/.test(form.kbli))
+      newErrors.kbli = "KBLI harus angka dan maksimal 5 digit"
+
+    if (!form.alamat)
+      newErrors.alamat = "Alamat wajib diisi"
+
+    // if (!form.latitude || !form.longitude)
+    //   newErrors.lokasi = "Lokasi wajib diisi"
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      setLoading(false)
+      return
+    }
+
+    const koordinat =
+      form.latitude && form.longitude
+        ? `${form.latitude},${form.longitude}`
+        : null
+
+    try {
+      const { data: usahaProfile } = await supabase
         .from("usaha_profile")
         .select("id")
         .eq("user_id", user.id)
         .single()
 
-    if (profileError || !usahaProfile) {
-      console.error("USAHA PROFILE ERROR:", profileError)
-      alert("Profil usaha belum dibuat")
-      setLoading(false)
-      return
-    }
+      if (!usahaProfile) return
 
-    // ==========================
-    // UPDATE
-    // ==========================
-    if (editId) {
+      if (editId) {
+        const { data, error } = await supabase
+          .from("usaha_kegiatan")
+          .update({
+            jenis_usaha_kegiatan: form.jenis,
+            deskripsi_kegiatan: form.deskripsi,
+            kbli: form.kbli,
+            alamat_usaha_kegiatan: form.alamat,
+            koordinat_lokasi: koordinat,
+          })
+          .eq("id", editId)
+          .select()
+          .single()
 
-      const { data, error } = await supabase
-        .from("usaha_kegiatan")
-        .update({
-          jenis_usaha_kegiatan: form.jenis,
-          deskripsi_kegiatan: form.deskripsi,
-          kbli: form.kbli,
-          koordinat_lokasi: form.koordinat,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editId)
-        .select()
-        .single()
+        if (error) throw error
 
-      if (error) {
-        console.error("UPDATE ERROR:", error)
-        throw error
-      }
-
-      setList((prev) =>
-        prev.map((item) =>
-          item.id === editId ? data : item
+        setList((prev) =>
+          prev.map((i) =>
+            i.id === editId ? data : i
+          )
         )
-      )
-    }
+      } else {
+        const { data, error } = await supabase
+          .from("usaha_kegiatan")
+          .insert({
+            profile_id: usahaProfile.id,
+            jenis_usaha_kegiatan: form.jenis,
+            deskripsi_kegiatan: form.deskripsi,
+            kbli: form.kbli,
+            alamat_usaha_kegiatan: form.alamat,
+            koordinat_lokasi: koordinat,
+          })
+          .select()
+          .single()
 
-    // ==========================
-    // INSERT
-    // ==========================
-    else {
+        if (error) throw error
 
-      const { data, error } = await supabase
-        .from("usaha_kegiatan")
-        .insert({
-          profile_id: usahaProfile.id,
-          jenis_usaha_kegiatan: form.jenis,
-          deskripsi_kegiatan: form.deskripsi,
-          kbli: form.kbli,
-          koordinat_lokasi: form.koordinat,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error("INSERT ERROR:", error)
-        throw error
+        setList((prev) => [data, ...prev])
       }
 
-      setList((prev) => [data, ...prev])
+      setOpen(false)
+      setEditId(null)
+      setForm({
+        jenis: "",
+        deskripsi: "",
+        kbli: "",
+        alamat: "",
+        latitude: "",
+        longitude: "",
+      })
+
+    } catch (err) {
+      setErrors({
+        global: "Terjadi kesalahan saat menyimpan data",
+      })
     }
 
-    setOpen(false)
-
-    setForm({
-      jenis: "",
-      deskripsi: "",
-      kbli: "",
-      koordinat: "",
-    })
-
-    setEditId(null)
-
-  } catch (err) {
-    console.error("SAVE ERROR:", err)
-    alert("Gagal menyimpan data")
+    setLoading(false)
   }
-
-  setLoading(false)
-}
 
   // ======================================
   // DELETE
   // ======================================
-const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => {
+    const ok = confirm("Hapus data ini?")
+    if (!ok) return
 
-  const confirmDelete = confirm(
-    "Apakah Anda yakin ingin menghapus data usaha ini?"
-  )
-
-  if (!confirmDelete) return
-
-  try {
-
-    const { error } = await supabase
+    await supabase
       .from("usaha_kegiatan")
       .delete()
       .eq("id", id)
 
-    if (error) {
-      console.error("DELETE ERROR:", error)
-      alert(error.message)
-      return
-    }
-
     setList((prev) =>
-      prev.filter((item) => item.id !== id)
+      prev.filter((i) => i.id !== id)
     )
-
-    alert("Data berhasil dihapus")
-
-  } catch (err) {
-    console.error("DELETE ERROR:", err)
-    alert("Gagal menghapus data")
   }
+
+  // Acces Guard
+  if (loadingPage) {
+  return (
+    <div className="p-6">
+      Memuat data...
+    </div>
+  )
+}
+
+if (!profileReady) {
+  return (
+    <div className="max-w-2xl mx-auto py-10 px-4">
+
+      <div className="border rounded-xl p-6 space-y-4">
+
+        <h1 className="text-2xl font-bold">
+          Profil Belum Lengkap
+        </h1>
+
+        <p className="text-muted-foreground">
+          Anda harus melengkapi profil terlebih dahulu
+          sebelum dapat mengakses halaman Profil Usaha.
+        </p>
+
+        <Button asChild>
+          <Link href="/profil">
+            Lengkapi Profil
+          </Link>
+        </Button>
+
+      </div>
+
+    </div>
+  )
 }
 
   // ======================================
-  // UI
+  // UI (TIDAK DIUBAH)
   // ======================================
   return (
     <div className="space-y-6 px-4 lg:px-6 py-6">
 
       {/* HEADER */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex justify-between">
         <div>
-          <h1 className="text-3xl font-bold">
-            Jenis Usaha/Kegiatan
+          <h1 className="text-2xl font-bold">
+            Jenis Usaha / Kegiatan
           </h1>
-
           <p className="text-muted-foreground">
-            Kelola usaha pengguna
+            Kelola data usaha pengguna
           </p>
         </div>
 
-        <Button
-          onClick={() => setOpen(true)}
-          className="w-full md:w-auto"
-        >
-          Tambah
+        <Button onClick={() => setOpen(true)}>
+          Tambah Usaha/Kegiatan
         </Button>
       </div>
 
-      {/* TABLE */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Usaha</CardTitle>
-        </CardHeader>
+      {/* TABLE + MOBILE (TIDAK DIUBAH) */}
+      <div className="space-y-4">
 
-        <CardContent>
-          {list.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Belum ada data
-            </p>
-          ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th>Jenis</th>
-                  <th>Deskripsi</th>
-                  <th>KBLI</th>
-                  <th>Koordinat</th>
-                  <th className="text-right">Aksi</th>
-                </tr>
-              </thead>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th>Nama Usaha/Kegiatan</th>
+                <th>Deskripsi Usaha/Kegiatan</th>
+                <th>KBLI</th>
+                <th>Alamat Usaha/Kegiatan</th>
+                <th>Koordinat Lokasi Usaha/Kegiatan</th>
+                <th className="text-right">Aksi</th>
+              </tr>
+            </thead>
 
-              <tbody>
-                {list.map((item) => (
-                  <tr key={item.id} className="border-b">
-                    <td>{item.jenis_usaha_kegiatan}</td>
-                    <td>{item.deskripsi_kegiatan}</td>
-                    <td>{item.kbli}</td>
-                    <td>{item.koordinat_lokasi}</td>
+            <tbody>
+              {list.map((item) => (
+                <tr key={item.id} className="border-b">
+                  <td>{item.jenis_usaha_kegiatan}</td>
+                  <td>{item.deskripsi_kegiatan}</td>
+                  <td>{item.kbli}</td>
+                  <td>{item.alamat_usaha_kegiatan}</td>
+                  <td>{item.koordinat_lokasi}</td>
 
-                    <td className="flex justify-end gap-2">
+                  <td className="flex justify-end gap-2">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        setEditId(item.id)
+
+                        const [lat, lng] =
+                          (item.koordinat_lokasi || "").split(",")
+
+                        setForm({
+                          jenis: item.jenis_usaha_kegiatan,
+                          deskripsi: item.deskripsi_kegiatan,
+                          kbli: item.kbli,
+                          alamat: item.alamat_usaha_kegiatan,
+                          latitude: lat || "",
+                          longitude: lng || "",
+                        })
+
+                        setOpen(true)
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+
+                    {item.hasReport && (
                       <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => {
-                          setEditId(item.id)
-                          setForm({
-                            jenis: item.jenis_usaha_kegiatan,
-                            deskripsi: item.deskripsi_kegiatan,
-                            kbli: item.kbli,
-                            koordinat: item.koordinat_lokasi,
-                          })
-                          setOpen(true)
-                        }}
-                      >
-                        <Pencil className="w-4 h-4" />
+                      variant="outline">
+                        Sudah dilaporkan
                       </Button>
+                    )}
 
+                    {!item.hasReport && (
                       <Button
                         size="icon"
                         variant="destructive"
@@ -379,92 +407,269 @@ const handleDelete = async (id: string) => {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {list.length > 0 && (
-        <div className="flex justify-end">
-          <Button asChild size="lg">
-            <a href="/buat-laporan">
-              <FileText className="mr-2 h-4 w-4" />
-              Lanjutkan ke Buat Laporan
-            </a>
-          </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* MODAL */}
+        {/* MOBILE tetap utuh */}
+        <div className="grid gap-3 md:hidden">
+          {list.map((item) => (
+            <div
+              key={item.id}
+              className="border rounded-lg p-4 space-y-2"
+            >
+              <div className="font-semibold">
+                {item.jenis_usaha_kegiatan}
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                {item.deskripsi_kegiatan}
+              </div>
+
+              <div className="text-xs space-y-1">
+                <div>KBLI: {item.kbli}</div>
+                <div>Alamat: {item.alamat_usaha_kegiatan}</div>
+                <div>Koordinat: {item.koordinat_lokasi}</div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditId(item.id)
+
+                    const [lat, lng] =
+                      (item.koordinat_lokasi || "").split(",")
+
+                    setForm({
+                      jenis: item.jenis_usaha_kegiatan,
+                      deskripsi: item.deskripsi_kegiatan,
+                      kbli: item.kbli,
+                      alamat: item.alamat_usaha_kegiatan,
+                      latitude: lat || "",
+                      longitude: lng || "",
+                    })
+
+                    setOpen(true)
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+
+                {item.hasReport && (
+                  <Button
+                      variant="outline">
+                    Sudah dilaporkan
+                  </Button>
+                )}
+
+                {!item.hasReport && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Hapus
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+
+      {/* MODAL (TIDAK DIUBAH) */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-
           <DialogHeader>
             <DialogTitle>
-              {editId ? "Edit" : "Tambah"}
+              {editId ? "Edit" : "Tambah"} Usaha
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
 
             <div>
-              <Label>Nama Usaha/kegiatan</Label>
-              <Input
-                value={form.jenis}
-                onChange={(e) =>
-                  handleChange("jenis", e.target.value)
-                }
-              />
+              <Label>Nama Usaha/Kegiatan</Label>
+                <Input
+                  value={form.jenis}
+                  onChange={(e) => {
+                    const val = e.target.value
+
+                    setForm({ ...form, jenis: val })
+
+                    // realtime check (simple)
+                    checkNamaUsaha(val)
+                  }}
+                />
+                {checkingName && (
+                  <p className="text-xs text-muted-foreground">
+                    Mengecek nama usaha...
+                  </p>
+                )}
+
+                {nameExists && (
+                  <p className="text-xs text-red-500">
+                    Nama usaha/kegiatan sudah terdaftar pada profil Anda
+                  </p>
+                )}
             </div>
 
             <div>
-              <Label>Deskripsi Usaha/kegiatan</Label>
+              <Label>Deskripsi Usaha/Kegiatan</Label>
               <Textarea
                 value={form.deskripsi}
                 onChange={(e) =>
-                  handleChange("deskripsi", e.target.value)
+                  setForm({ ...form, deskripsi: e.target.value })
                 }
               />
+              {errors.deskripsi && (
+                <p className="text-red-500 text-xs">
+                  {errors.deskripsi}
+                </p>
+              )}
             </div>
 
             <div>
-              <Label>KBLI (max 5 digit)</Label>
+              <Label>KBLI</Label>
               <Input
                 value={form.kbli}
-                onChange={(e) =>
-                  handleKbliChange(e.target.value)
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "")
+                  if (val.length <= 5)
+                    setForm({ ...form, kbli: val })
+                }}
               />
+              {errors.kbli && (
+                <p className="text-red-500 text-xs">
+                  {errors.kbli}
+                </p>
+              )}
             </div>
 
             <div>
-              <Label>Koordinat</Label>
+              <Label>Alamat Usaha/Kegiatan</Label>
               <Input
-                value={form.koordinat}
+                value={form.alamat}
                 onChange={(e) =>
-                  handleKoordinatChange(e.target.value)
+                  setForm({ ...form, alamat: e.target.value })
                 }
               />
+              {errors.alamat && (
+                <p className="text-red-500 text-xs">
+                  {errors.alamat}
+                </p>
+              )}
             </div>
 
-            <Button
-              className="w-full"
-              onClick={handleSave}
-              disabled={loading}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {loading ? "Menyimpan..." : "Simpan"}
-            </Button>
+            {/* LOKASI */}
+            <div className="space-y-3">
+              <Label>Lokasi Usaha/Kegiatan</Label>
+
+              {/* STATUS LOKASI */}
+              <div className="p-3 rounded-md border bg-muted/30 text-xs space-y-1">
+                <div className="font-medium">
+                  📍 Status Lokasi
+                </div>
+
+                {form.latitude && form.longitude ? (
+                  <div className="text-green-600">
+                    ✔ Lokasi sudah diambil
+                    <div className="text-muted-foreground">
+                      {form.latitude}, {form.longitude}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">
+                    Belum ada lokasi. Klik tombol di bawah untuk mengambil GPS.
+                  </div>
+                )}
+              </div>
+
+              {/* INPUT (OPTIONAL, TAPI TETAP ADA) */}
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Latitude"
+                  value={form.latitude}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      latitude: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  placeholder="Longitude"
+                  value={form.longitude}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      longitude: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {/* BUTTON GPS UTAMA */}
+              <Button
+                type="button"
+                onClick={handleGetLocation}
+                className="w-full"
+              >
+                📍 Ambil Lokasi Saat Ini
+              </Button>
+
+              {/* ERROR */}
+              {/* {errors.lokasi && (
+                <p className="text-red-500 text-xs">
+                  {errors.lokasi}
+                </p>
+              )} */}
+            </div>
+
+          <Button
+            className="w-full"
+            onClick={handleSave}
+            disabled={
+              loading ||
+              nameExists ||
+              checkingName ||
+              !form.jenis ||
+              !form.deskripsi ||
+              !form.kbli ||
+              !form.alamat
+              // !form.latitude ||
+              // !form.longitude
+            }
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {loading ? "Menyimpan..." : "Simpan"}
+          </Button>
 
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* NEXT */}
+      {list.length > 0 && (
+        <div className="flex justify-end">
+          <Button asChild>
+            <a href="/buat-laporan">
+              <FileText className="w-4 h-4 mr-2" />
+              Lanjut Buat Laporan
+            </a>
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

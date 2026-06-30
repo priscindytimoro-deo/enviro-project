@@ -69,12 +69,7 @@ export function LoginForm1({
       return
     }
 
-    // if (authError) {
-    //   console.log(authError)
-    //   setError(authError.message)
-    //   setLoading(false)
-    //   return
-    // }
+
 
     const user = authData.user
 
@@ -94,6 +89,18 @@ export function LoginForm1({
     }
 
     // CEK VERIFIKASI
+
+    if (!user.email_confirmed_at) {
+      await supabase.auth.signOut()
+
+      setError(
+        "Email belum diverifikasi. Silakan cek inbox email Anda."
+      )
+
+      setLoading(false)
+      return
+    }
+
     if (profile.status_verifikasi !== "approved") {
       await supabase.auth.signOut()
       setError("Akun belum diverifikasi admin")
@@ -159,7 +166,7 @@ export function LoginForm1({
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="email@contoh.com"
+                          placeholder="Contoh: valerossi@gmail.com"
                           {...field}
                         />
                       </FormControl>

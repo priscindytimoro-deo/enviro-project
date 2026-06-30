@@ -100,8 +100,9 @@ export function SignupForm1({
     },
   })
 
+
   /* =========================
-     SUBMIT SIGNUP
+   SUBMIT SIGNUP
   ========================= */
   async function onSubmit(data: SignupFormValues) {
     setLoading(true)
@@ -109,61 +110,78 @@ export function SignupForm1({
     setSuccess("")
 
     try {
-      // 1. cek username
-      const { data: existing } = await supabase
+      // =====================================================
+      // 1. Cek Username
+      // =====================================================
+      const { data: existingUser, error: usernameError } = await supabase
         .from("profiles")
         .select("username")
         .eq("username", data.username)
         .maybeSingle()
 
-      if (existing) {
-        setError("Username sudah digunakan")
-        setLoading(false)
+      if (usernameError) {
+        throw usernameError
+      }
+
+      if (existingUser) {
+        setError("Username sudah digunakan.")
         return
       }
 
-      // 2. signup auth
-      const { data: authData, error: authError } =
-        await supabase.auth.signUp({
-          email: data.email,
-          password: data.password,
-        })
-
-      if (authError) {
-        setError(authError.message)
-        setLoading(false)
-        return
-      }
-
-      // 3. insert profile
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: authData.user.id,
+      // =====================================================
+      // 2. Register User
+      // =====================================================
+      const {
+        data: authData,
+        error: authError,
+      } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
             nama_penanggung_jawab: data.namaPenanggungJawab,
             username: data.username,
             no_hp: data.nohp,
-            role: "user",
-          })
+          },
+        },
+      })
 
-        if (profileError) {
-          setError(profileError.message)
-          setLoading(false)
-          return
-        }
+      if (authError) {
+        throw authError
       }
 
-      // 4. success
-      setSuccess("Pendaftaran berhasil, silakan login")
+      if (!authData.user) {
+        throw new Error("Gagal membuat akun.")
+      }
+
+      // =====================================================
+      // 3. Logout (mencegah login otomatis)
+      // =====================================================
+      await supabase.auth.signOut()
+
+      // =====================================================
+      // 4. Success
+      // =====================================================
+      setSuccess(
+        "Pendaftaran berhasil. Akun Anda telah terdaftar dan sedang menunggu verifikasi Admin."
+      )
 
       form.reset()
 
+      // =====================================================
+      // 5. Redirect ke Sign In
+      // =====================================================
       setTimeout(() => {
-        router.push("/sign-in")
-      }, 1200)
+        router.replace("/sign-in")
+      }, 2500)
+
     } catch (err: any) {
-      setError(err.message)
+      console.error(err)
+
+      setError(
+        err?.message || "Terjadi kesalahan saat melakukan pendaftaran."
+      )
     } finally {
       setLoading(false)
     }

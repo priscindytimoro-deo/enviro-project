@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { Plus } from "lucide-react"
 
 import type { UserFormValues } from "@/types/user"
+import type { User } from "@/types/user"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/form"
 
 import { Input } from "@/components/ui/input"
+
 import {
   Select,
   SelectContent,
@@ -34,41 +36,74 @@ import {
 } from "@/components/ui/select"
 
 interface Props {
-  onAddUser: (userData: UserFormValues) => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+
+  user: User | null
+
+  onEditUser: (data: UserFormValues & { id: string }) => Promise<void> | void
 }
 
-export function UserFormDialog({ onAddUser }: Props) {
-  const [open, setOpen] = useState(false)
+export function UserFormDialog({
+  open,
+  onOpenChange,
+  user,
+  onEditUser,
+}: Props) {
 
   const form = useForm<UserFormValues>({
     defaultValues: {
+      email: "",
+
       name: "",
-      username: "", // ✅ FIX: tambah username
+      username: "",
       phone: "",
-      role: "",
-      status: "Aktif",
-      verificationStatus: "Belum Verifikasi",
+
+      role: "user",
+
+      is_active: false,
+
+      verificationStatus: "pending",
     },
   })
 
-  const onSubmit = (values: UserFormValues) => {
-    onAddUser(values)
+  useEffect(() => {
+    if (!user) return
+
+    form.reset({
+      email: user.email,
+
+      name: user.name,
+      username: user.username,
+      phone: user.phone,
+
+      role: user.role,
+
+      is_active: user.is_active,
+
+      verificationStatus: user.verificationStatus,
+    })
+  }, [user, form])
+
+  const onSubmit = async (values: UserFormValues) => {
+    if (!user) return
+
+    await onEditUser({
+      id: user.id,
+      ...values,
+    })
+
     form.reset()
-    setOpen(false)
+    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+        open={open}
+        onOpenChange={onOpenChange}
+      >
 
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 size-4" />
-          Tambah Pengguna
-        </Button>
-      </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[550px]">
-
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Tambah Pengguna</DialogTitle>
         </DialogHeader>
@@ -78,34 +113,59 @@ export function UserFormDialog({ onAddUser }: Props) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4"
           >
-
-            {/* NAME */}
+            {/* EMAIL */}
             <FormField
               control={form.control}
-              name="name"
-              rules={{ required: "Wajib diisi" }}
+              name="email"
+              rules={{ required: "Email wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nama</FormLabel>
+                  <FormLabel>Email</FormLabel>
+
                   <FormControl>
-                    <Input {...field} />
+                    <Input
+                      type="email"
+                      placeholder="user@email.com"
+                      {...field}
+                    />
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* USERNAME ✅ NEW */}
+            {/* NAMA */}
+            <FormField
+              control={form.control}
+              name="name"
+              rules={{ required: "Nama wajib diisi" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Penanggung Jawab</FormLabel>
+
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* USERNAME */}
             <FormField
               control={form.control}
               name="username"
-              rules={{ required: "Wajib diisi" }}
+              rules={{ required: "Username wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Username</FormLabel>
+
                   <FormControl>
-                    <Input placeholder="contoh: admin_sistem" {...field} />
+                    <Input {...field} />
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -115,13 +175,15 @@ export function UserFormDialog({ onAddUser }: Props) {
             <FormField
               control={form.control}
               name="phone"
-              rules={{ required: "Wajib diisi" }}
+              rules={{ required: "Nomor HP wajib diisi" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone</FormLabel>
+                  <FormLabel>No HP</FormLabel>
+
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -131,82 +193,103 @@ export function UserFormDialog({ onAddUser }: Props) {
             <FormField
               control={form.control}
               name="role"
-              rules={{ required: true }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih role" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
 
                     <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Pengawas">Pengawas</SelectItem>
-                      <SelectItem value="Pengguna">Pengguna</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="kadis">Kadis</SelectItem>
+                      <SelectItem value="kabid">Kabid</SelectItem>
+                      <SelectItem value="pengawas">Pengawas</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* STATUS */}
+            {/* STATUS AKTIF */}
             <FormField
               control={form.control}
-              name="status"
+              name="is_active"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel>Status Akun</FormLabel>
 
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    value={field.value ? "true" : "false"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "true")
+                    }
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih status" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
 
                     <SelectContent>
-                      <SelectItem value="Aktif">Aktif</SelectItem>
-                      <SelectItem value="Nonaktif">Nonaktif</SelectItem>
+                      <SelectItem value="true">
+                        Aktif
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        Nonaktif
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* VERIFICATION STATUS */}
+            {/* VERIFIKASI */}
             <FormField
               control={form.control}
               name="verificationStatus"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status Verifikasi</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
+
                     <SelectContent>
-                      <SelectItem value="Terverifikasi">Terverifikasi</SelectItem>
-                      <SelectItem value="Belum Verifikasi">Belum Verifikasi</SelectItem>
+                      <SelectItem value="approved">
+                        Approved
+                      </SelectItem>
+
+                      <SelectItem value="pending">
+                        Pending
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
               )}
             />
 
-            {/* BUTTON */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="submit">Simpan</Button>
+            <div className="flex justify-end">
+              <Button type="submit">
+                Simpan
+              </Button>
             </div>
-
           </form>
         </Form>
-
       </DialogContent>
     </Dialog>
   )

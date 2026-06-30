@@ -1,21 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Search } from "lucide-react"
+import type { Laporan } from "../page"
 
 import {
   Table,
@@ -26,213 +12,124 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-import { EllipsisVertical } from "lucide-react"
-
-import type { Laporan } from "../page"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Props {
   data: Laporan[]
-  onApprove: (id: number) => void
-  onAuditKadis: (id: number) => void
-  onDelete: (id: number) => void
+  onNextStage: (id: string, catatan: string) => void
 }
 
-export function DataTable({
-  data,
-  onApprove,
-  onAuditKadis,
-  onDelete,
-}: Props) {
-  const [globalFilter, setGlobalFilter] = useState("")
-
-  const columns: ColumnDef<Laporan>[] = [
-    {
-      accessorKey: "namaUsaha",
-      header: "Nama Usaha/Instansi",
-    },
-    {
-      accessorKey: "jenisKegiatan",
-      header: "Jenis Kegiatan",
-    },
-    {
-      accessorKey: "jenisDokumen",
-      header: "Jenis Dokumen",
-    },
-    {
-      accessorKey: "nomorDokumen",
-      header: "Nomor Dokumen",
-    },
-    {
-      accessorKey: "tanggalTerbit",
-      header: "Tanggal Terbit",
-    },
-    {
-      accessorKey: "lokasi",
-      header: "Lokasi (Koordinat)",
-    },
-    {
-      accessorKey: "linkDokumen",
-      header: "Link Dokumen",
-      cell: ({ row }) => (
-        <a
-          href={row.getValue("linkDokumen")}
-          target="_blank"
-          className="text-blue-600 underline"
-        >
-          Lihat
-        </a>
-      ),
-    },
-    {
-      accessorKey: "waktuLapor",
-      header: "Waktu/Tgl Lapor",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue("status")}</Badge>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => {
-        const item = row.original
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <EllipsisVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onApprove(item.id)}>
-                Approve
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={() => onAuditKadis(item.id)}>
-                Audit Kadis
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDelete(item.id)}
-              >
-                Hapus
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ]
-
-  const table = useReactTable({
-    data: data ?? [],
-    columns,
-
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-
-    state: {
-      globalFilter,
-    },
-
-    onGlobalFilterChange: setGlobalFilter,
-  })
+export function DataTable({ data, onNextStage }: Props) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [catatan, setCatatan] = useState("")
 
   return (
-    <div className="space-y-4">
+    <div className="border rounded-lg overflow-auto">
 
-      {/* SEARCH */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Cari laporan..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-        />
-      </div>
+      <Table>
 
-      {/* TABLE */}
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
-                {hg.headers.map((h) => (
-                  <TableHead key={h.id}>
-                    {flexRender(
-                      h.column.columnDef.header,
-                      h.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nama Usaha</TableHead>
+            <TableHead>Jenis Kegiatan</TableHead>
+            <TableHead>Alamat</TableHead>
+            <TableHead>Link Dokumen</TableHead>
+            <TableHead>Waktu Lapor</TableHead>
+            <TableHead>Periode Pelaporan</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Catatan</TableHead>
+            <TableHead>Aksi</TableHead>
+          </TableRow>
+        </TableHeader>
 
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center h-24"
+        <TableBody>
+          {data.map((item) => (
+            <TableRow key={item.id}>
+
+              <TableCell>{item.namaUsaha}</TableCell>
+              <TableCell>{item.jenisKegiatan}</TableCell>
+              <TableCell>{item.alamatUsaha}</TableCell>
+
+              <TableCell>
+                <a
+                  href={item.linkDokumen}
+                  className="text-blue-600 underline"
+                  target="_blank"
                 >
-                  Tidak ada data laporan
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  Lihat
+                </a>
+              </TableCell>
 
-      {/* PAGINATION */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Prev
-        </Button>
+              <TableCell>
+                {item.waktuLapor !== "-"
+                  ? new Date(item.waktuLapor).toLocaleString("id-ID")
+                  : "-"}
+              </TableCell>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
+              <TableCell>{item.periodePelaporan}</TableCell>
+
+              <TableCell>
+                <Badge>{item.report_stage}</Badge>
+              </TableCell>
+
+              <TableCell className="max-w-[200px] whitespace-pre-wrap">
+                {typeof item.catatan_review === "string"
+                  ? item.catatan_review
+                  : item.catatan_review
+                  ? JSON.stringify(item.catatan_review)
+                  : "-"}
+              </TableCell>
+
+              <TableCell>
+                {openId === item.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={catatan}
+                      onChange={(e) => setCatatan(e.target.value)}
+                      placeholder="Catatan ke Pengawas"
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (!catatan.trim()) {
+                            alert("Catatan wajib diisi")
+                            return
+                          }
+
+                          onNextStage(item.id, catatan)
+                          setOpenId(null)
+                          setCatatan("")
+                        }}
+                      >
+                        Kirim
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setOpenId(null)}
+                      >
+                        Batal
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={() => setOpenId(item.id)}>
+                    Disposisi
+                  </Button>
+                )}
+              </TableCell>
+
+            </TableRow>
+          ))}
+        </TableBody>
+
+      </Table>
+
     </div>
   )
 }

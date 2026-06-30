@@ -1,365 +1,130 @@
-import { cookies } from "next/headers"
-import { createServerClient } from "@supabase/ssr"
-import { supabaseAdmin } from "@/lib/supabase-admin"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+"use client"
 
+import { useEffect, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { StatsCard } from "./components/stats-card"
+import { LatestKabidTable } from "./components/latest-kabid-table"
+import { MonitorKabidTable } from "./components/monitor-kabid-table"
 
-import {
-  Users,
-  Building2,
-  FileText,
-  ShieldCheck,
-} from "lucide-react"
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-import { Badge } from "@/components/ui/badge"
+export interface KabidDashboardReport {
+  id: string
 
-export default async function AdminDashboardPage() {
-  const cookieStore = await cookies()
+  namaUsaha: string
+  jenisKegiatan: string
+  alamatUsaha: string
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-      },
-    }
-  )
+  waktuLapor: string
+  periodePelaporan: string
 
-const { data: users } = await supabaseAdmin
-  .from("profiles")
-  .select("*")
-  .order("created_at", { ascending: false })
+  report_stage: string
+  jadwal_pengawasan: string | null
+}
 
-  const stats = {
-    users: users?.length ?? 0,
-    usaha: 0,
-    laporan: 0,
+export default function KabidDashboardPage() {
+  const [loading, setLoading] = useState(true)
+
+  const [jumlahLaporan, setJumlahLaporan] = useState(0)
+
+  const [laporanKabid, setLaporanKabid] = useState<KabidDashboardReport[]>([])
+  const [monitor, setMonitor] = useState<KabidDashboardReport[]>([])
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [])
+
+  const fetchDashboard = async () => {
+    setLoading(true)
+
+    const [reportsRes, profileRes, kegiatanRes] = await Promise.all([
+      supabase.from("reports").select("*"),
+      supabase.from("usaha_profile").select("*"),
+      supabase.from("usaha_kegiatan").select("*"),
+    ])
+
+    const reports = reportsRes.data ?? []
+    const profiles = profileRes.data ?? []
+    const kegiatan = kegiatanRes.data ?? []
+
+    setJumlahLaporan(reports.length)
+
+    const profileMap = new Map(profiles.map((p: any) => [p.id, p]))
+    const kegiatanMap = new Map(kegiatan.map((k: any) => [k.id, k]))
+
+    const mapped: KabidDashboardReport[] = reports.map((r: any) => {
+      const keg = kegiatanMap.get(r.usaha_kegiatan_id)
+      const prof = keg ? profileMap.get(keg.profile_id) : null
+
+      return {
+        id: r.id,
+
+        namaUsaha: prof
+          ? `${prof.bentuk_badan_usaha} ${prof.nama_usaha_instansi}`
+          : "-",
+
+        jenisKegiatan: keg
+          ? `${keg.jenis_usaha_kegiatan} - ${keg.deskripsi_kegiatan}`
+          : "-",
+
+        alamatUsaha: keg?.alamat_usaha_kegiatan ?? "-",
+
+        waktuLapor: r.created_at ?? "-",
+        periodePelaporan: r.periode_pelaporan ?? "-",
+
+        report_stage: r.report_stage ?? "-",
+        jadwal_pengawasan: r.jadwal_pengawasan ?? null,
+      }
+    })
+
+    // =========================
+    // KABID INBOX
+    // =========================
+    setLaporanKabid(
+      mapped
+        .filter((x) => x.report_stage === "kabid_review")
+        .slice(0, 5)
+    )
+
+    // =========================
+    // MONITOR LANJUTAN
+    // =========================
+    setMonitor(
+      mapped
+        .filter((x) =>
+          ["pengawas_review", "admin_final_review"].includes(
+            x.report_stage
+          )
+        )
+        .slice(0, 5)
+    )
+
+    setLoading(false)
   }
 
-  const tingkatKepatuhan = 0
-
-  const latestUsers = users?.slice(0, 5) ?? []
+  if (loading) {
+    return <div className="p-6">Loading...</div>
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-
-      {/* ======================================
-          HEADER
-      ====================================== */}
-      <div className="space-y-1">
-
-        <h1 className="text-3xl font-bold tracking-tight">
-          Dashboard Admin
-        </h1>
-
-        <p className="text-muted-foreground">
-          Monitoring dan pengawasan kepatuhan lingkungan hidup
-        </p>
-
-      </div>
-
-      {/* ======================================
-          TOP CARDS
-      ====================================== */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-
-        {/* USERS */}
-        <Card>
-
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-
-            <CardTitle className="text-sm font-medium">
-              Jumlah Pengguna
-            </CardTitle>
-
-            <Users className="size-4 text-muted-foreground" />
-
-          </CardHeader>
-
-          <CardContent>
-
-            <div className="text-3xl font-bold">
-              {stats.users}
-            </div>
-
-          </CardContent>
-
-        </Card>
-
-        {/* USAHA */}
-        <Card>
-
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-
-            <CardTitle className="text-sm font-medium">
-              Jenis Usaha/Kegiatan
-            </CardTitle>
-
-            <Building2 className="size-4 text-muted-foreground" />
-
-          </CardHeader>
-
-          <CardContent>
-
-            <div className="text-3xl font-bold">
-              {stats.usaha}
-            </div>
-
-          </CardContent>
-
-        </Card>
-
-        {/* LAPORAN */}
-        <Card>
-
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-
-            <CardTitle className="text-sm font-medium">
-              Jumlah Laporan
-            </CardTitle>
-
-            <FileText className="size-4 text-muted-foreground" />
-
-          </CardHeader>
-
-          <CardContent>
-
-            <div className="text-3xl font-bold">
-              {stats.laporan}
-            </div>
-
-          </CardContent>
-
-        </Card>
-
-        {/* KEPATUHAN */}
-        <Card>
-
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-
-            <CardTitle className="text-sm font-medium">
-              Tingkat Kepatuhan
-            </CardTitle>
-
-            <ShieldCheck className="size-4 text-muted-foreground" />
-
-          </CardHeader>
-
-          <CardContent>
-
-            <div className="text-3xl font-bold">
-              {tingkatKepatuhan}%
-            </div>
-
-          </CardContent>
-
-        </Card>
-
-      </div>
-
-      {/* ======================================
-          TABEL LAPORAN TERBARU
-      ====================================== */}
-      <Card>
-
-        <CardHeader className="flex flex-row items-center justify-between">
-
-          <div>
-
-            <CardTitle>
-              Laporan Terbaru
-            </CardTitle>
-
-            <CardDescription>
-              Daftar laporan terbaru pelaku usaha
-            </CardDescription>
-
-          </div>
-
-          <Button asChild variant="outline">
-
-            <Link href="/admin/report">
-              Lihat Selengkapnya
-            </Link>
-
-          </Button>
-
-        </CardHeader>
-        <CardContent>
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full text-sm">
-
-              <thead>
-
-                <tr className="border-b">
-
-                  <th className="py-3 text-left font-medium">
-                    Perusahaan
-                  </th>
-
-                  <th className="py-3 text-left font-medium">
-                    Dokumen
-                  </th>
-
-                  <th className="py-3 text-left font-medium">
-                    Tanggal
-                  </th>
-
-                  <th className="py-3 text-left font-medium">
-                    Status
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                <tr>
-
-                  <td
-                    colSpan={4}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    Belum ada data laporan
-                  </td>
-
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </CardContent>
-
-      </Card>
-
-      {/* ======================================
-          TABEL USER TERBARU
-      ====================================== */}
-      <Card>
-
-        <CardHeader className="flex flex-row items-center justify-between">
-
-          <div>
-
-            <CardTitle>
-              Pengguna Terbaru
-            </CardTitle>
-
-            <CardDescription>
-              Daftar pengguna terbaru
-            </CardDescription>
-
-          </div>
-
-          <Button asChild variant="outline">
-
-            <Link href="/admin/users">
-              Lihat Selengkapnya
-            </Link>
-
-          </Button>
-
-        </CardHeader>
-
-        <CardContent>
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full text-sm">
-
-              <thead>
-
-                <tr className="border-b">
-
-                  <th className="py-3 text-left font-medium">
-                    Nama Penanggung Jawab
-                  </th>
-
-                  <th className="py-3 text-left font-medium">
-                    No. HP
-                  </th>
-
-                  <th className="py-3 text-left font-medium">
-                    Role
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {latestUsers.length > 0 ? (
-
-                  latestUsers.map((item: any, index: number) => (
-
-                    <tr
-                      key={index}
-                      className="border-b"
-                    >
-
-                      <td className="py-4">
-                        {item.nama_penanggung_jawab ?? "-"}
-                      </td>
-
-                      <td className="py-4">
-                        {item.no_hp ?? "-"}
-                      </td>
-
-                      <td className="py-4">
-
-                        <Badge>
-                          {item.role}
-                        </Badge>
-
-                      </td>
-
-                    </tr>
-
-                  ))
-
-                ) : (
-
-                  <tr>
-
-                    <td
-                      colSpan={3}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      Belum ada data pengguna
-                    </td>
-
-                  </tr>
-
-                )}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </CardContent>
-
-      </Card>
+    <div className="space-y-6">
+
+      {/* OPTIONAL: stats sederhana */}
+      <StatsCard
+        totalLaporan={jumlahLaporan}
+        masuk={laporanKabid.length}
+        proses={monitor.length}
+      />
+
+      {/* Laporan masuk Kabid */}
+      <LatestKabidTable data={laporanKabid} />
+
+      {/* Monitor lanjutan */}
+      <MonitorKabidTable data={monitor} />
 
     </div>
   )

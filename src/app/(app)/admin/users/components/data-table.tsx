@@ -58,20 +58,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { UserFormDialog } from "./user-form-dialog"
 
 interface DataTableProps {
   users: User[]
-  onDeleteUser: (id: number) => void
+  onAddUser: (data: UserFormValues) => void
   onEditUser: (user: User) => void
-  onAddUser: (userData: UserFormValues) => void
+  onVerifyUser: (user: User) => void
+  onRejectUser: (user: User) => void
+  onDeleteUser: (user: User) => void
 }
 
 export function DataTable({
   users,
-  onDeleteUser,
-  onEditUser,
   onAddUser,
+  onEditUser,
+  onVerifyUser,
+  onRejectUser,
+  onDeleteUser,
 }: DataTableProps) {
 
   const [sorting, setSorting] = useState<SortingState>([])
@@ -154,13 +157,13 @@ export function DataTable({
     },
 
     {
-      accessorKey: "username",
+      accessorKey: "email",
 
-      header: "Username",
+      header: "Email",
 
       cell: ({ row }) => (
         <span className="text-sm">
-          {row.getValue("username")}
+          {row.getValue("email")}
         </span>
       ),
     },
@@ -198,21 +201,41 @@ export function DataTable({
     },
 
     {
-      accessorKey: "status",
-
+      accessorKey: "verificationStatus",
       header: "Status Verifikasi",
-
       cell: ({ row }) => {
-
         const status = row.getValue("verificationStatus") as string
 
         return (
-          <Badge
-            variant="outline"
-            className={getStatusColor(status)}
+          <span
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              status === "approved"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
           >
-            {status}
-          </Badge>
+            {status === "approved" ? "Approved" : "Pending"}
+          </span>
+        )
+      },
+    },
+
+    {
+      accessorKey: "is_active",
+      header: "Status Akun",
+      cell: ({ row }) => {
+        const active = row.getValue("is_active") as boolean
+
+        return (
+          <span
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              active
+                ? "bg-blue-100 text-blue-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {active ? "Aktif" : "Nonaktif"}
+          </span>
         )
       },
     },
@@ -238,6 +261,9 @@ export function DataTable({
 
         const user = row.original
 
+
+
+
         return (
           <DropdownMenu>
 
@@ -260,35 +286,34 @@ export function DataTable({
                 className="cursor-pointer"
               >
                 <Pencil className="mr-2 size-4" />
-                Edit Data
+                Edit Data User
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="cursor-pointer">
-
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => onVerifyUser(user)}
+              >
                 <CheckCircle2 className="mr-2 size-4 text-green-600" />
-
                 Verifikasi User
-
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="cursor-pointer">
-
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => onRejectUser(user)}
+              >
                 <XCircle className="mr-2 size-4 text-red-600" />
-
                 Tolak Verifikasi
-
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
                 className="cursor-pointer text-red-600"
-                onClick={() => onDeleteUser(user.id)}
+                onClick={() => onDeleteUser(user)}
               >
                 <Trash2 className="mr-2 size-4" />
                 Hapus
               </DropdownMenuItem>
-
             </DropdownMenuContent>
 
           </DropdownMenu>
@@ -335,8 +360,6 @@ export function DataTable({
           </p>
 
         </div>
-
-        <UserFormDialog onAddUser={onAddUser} />
 
       </div>
 
@@ -386,11 +409,11 @@ export function DataTable({
                 Admin
               </SelectItem>
 
-              <SelectItem value="Kepala Dinas">
+              <SelectItem value="kadis">
                 Kepala Dinas
               </SelectItem>
 
-              <SelectItem value="Kepala Bidang">
+              <SelectItem value="kabid">
                 Kepala Bidang
               </SelectItem>
 
@@ -398,7 +421,7 @@ export function DataTable({
                 Pengawas
               </SelectItem>
 
-              <SelectItem value="Pengguna">
+              <SelectItem value="user">
                 Pengguna
               </SelectItem>
 
@@ -453,18 +476,19 @@ export function DataTable({
                   className="hover:bg-muted/40"
                 >
 
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map((cell) => {
 
-                    <TableCell key={cell.id}>
+                    const columnId = cell.column.id
 
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-
-                    </TableCell>
-
-                  ))}
+                    return (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    )
+                  })}
 
                 </TableRow>
 
