@@ -41,7 +41,7 @@ export default function KadisMonitorPage() {
           "pengawas_review",
           "pengawasan_dijadwalkan",
           "laporan_disetujui",
-          "done",
+          "selesai",
         ])
         .order("created_at", { ascending: false }),
 
