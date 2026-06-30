@@ -127,8 +127,8 @@ export function FeaturesSection() {
         >
           {/* IMAGE */}
           <Image3D
-            lightSrc="/sop-light.png"
-            darkSrc="/sop-dark.png"
+            lightSrc="/SOP1.png"
+            darkSrc="/SOP1.png"
             alt="SOP Tahap Awal"
             direction="left"
           />
@@ -352,8 +352,8 @@ export function FeaturesSection() {
 
           {/* IMAGE */}
           <Image3D
-            lightSrc="/sop-light.png"
-            darkSrc="/sop-dark.png"
+            lightSrc="/SOP2.png"
+            darkSrc="/SOP2.png"
             alt="SOP Tahap Lanjutan"
             direction="right"
             className="order-1 lg:order-2"
