@@ -366,7 +366,11 @@ const FaqSection = () => {
                   cursor-pointer
                 "
               >
-                <a href="#contact">
+                <a
+                  href="https://wa.me/+6282236611208?text=Halo%20Admin%20DLH,%20saya%20ingin%20bertanya%20tentang%20pelaporan%20lingkungan."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Hubungi Admin
                 </a>
               </Button>
