@@ -1,36 +1,8 @@
-import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
 import { LandingPageContent } from "./landing-page-content"
 
-// ======================
-// METADATA
-// ======================
-export const metadata: Metadata = {
-  title:
-    "Monitor Patuh-LH | Monitoring Kepatuhan Laporan Berkala Pelaku Usaha – DLH TTS",
-
-  description:
-    "Monitor Patuh-LH merupakan platform digital Dinas Lingkungan Hidup Kabupaten Timor Tengah Selatan untuk memantau kepatuhan pelaku usaha dalam penyampaian laporan berkala lingkungan hidup secara transparan, terintegrasi, dan akuntabel.",
-
-  keywords: [
-    "monitor patuh lh",
-    "dashboard monitoring kepatuhan",
-    "kepatuhan pelaku usaha",
-    "laporan berkala lingkungan hidup",
-    "DLH TTS",
-    "SPPL",
-    "UKL-UPL",
-    "AMDAL",
-  ],
-
-  authors: [
-    {
-      name: "Dinas Lingkungan Hidup Kabupaten Timor Tengah Selatan",
-    },
-  ],
-}
 
 // ======================
 // PAGE
