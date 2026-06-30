@@ -44,7 +44,7 @@ export function NavUser({
   // HANDLE LOGOUT
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.replace("/sign-in")
+    router.replace("/landing")
   }
 
   return (
