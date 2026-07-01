@@ -482,11 +482,7 @@ export default function CekLaporanPage() {
               <SelectItem value="all">Semua</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="dalam proses">Dalam Proses</SelectItem>
-              <SelectItem value="ditolak">Ditolak</SelectItem>
-              <SelectItem value="terverifikasi">Terverifikasi</SelectItem>
-              <SelectItem value="menunggu penjadwalan">
-                Menunggu Penjadwalan
-              </SelectItem>
+              <SelectItem value="laporan disetujui">Laporan Disetujui</SelectItem>
             </SelectContent>
           </Select>
 
@@ -616,7 +612,7 @@ export default function CekLaporanPage() {
                   <TableCell className="text-center">
                     <Badge
                       variant={
-                        item.status_verifikasi === "Terverifikasi"
+                        item.status_verifikasi === "Laporan Disetujui"
                           ? "default"
                           : item.status_verifikasi === "Dalam Proses"
                           ? "secondary"
@@ -628,11 +624,9 @@ export default function CekLaporanPage() {
                   </TableCell>
 
                   <TableCell className="text-center">
-
-                    {item.status_verifikasi === "Draft"
+                    {["Draft", "Laporan Disetujui"].includes(item.status_verifikasi)
                       ? item.catatan_verifikasi || "-"
                       : "-"}
-
                   </TableCell>
 
                   <TableCell className="text-center">

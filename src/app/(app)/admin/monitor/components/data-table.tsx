@@ -49,7 +49,7 @@ const STATUS_LIST = [
   "pengawas_review",
   "pengawasan_dijadwalkan",
   "laporan_disetujui",
-  "done",
+  "selesai",
 ]
 
 export function DataTable({
@@ -71,7 +71,7 @@ export function DataTable({
       case "pengawas_review": return "Pengawas Review"
       case "pengawasan_dijadwalkan": return "Dijadwalkan"
       case "laporan_disetujui": return "Disetujui"
-      case "done": return "Selesai"
+      case "selesai": return "Selesai"
       default: return status
     }
   }
@@ -217,7 +217,10 @@ export function DataTable({
 
                           {/* ================= DONE ================= */}
                           <DropdownMenuItem
-                            disabled={item.report_stage !== "laporan_disetujui"}
+                            disabled={
+                              !["laporan_disetujui", "pengawasan_dijadwalkan"].includes(item.report_stage)
+                            }
+                            onClick={() => onNextStage(item.id, "selesai")}
                           >
                             Selesai
                           </DropdownMenuItem>

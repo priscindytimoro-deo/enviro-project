@@ -140,8 +140,32 @@ const handleNextStage = async (id: string, action?: string, payload?: any) => {
         catatan_review: `[PENGAWAS - APPROVE] ${payload.catatan}`,
       }).eq("id", id)
     }
-    
   }
+    // =========================
+    // SELESAI
+    // =========================
+    if (
+      action === "selesai" &&
+      (
+        report.report_stage === "laporan_disetujui" ||
+        report.report_stage === "pengawasan_dijadwalkan"
+      )
+    ) {
+      const { error } = await supabase
+        .from("reports")
+        .update({
+          report_stage: "selesai", // atau "selesai" jika itu yang digunakan di sistem Anda
+          status_verifikasi: "Laporan Disetujui",
+          catatan_verifikasi: "Sudah diverifikasi DLH",
+        })
+        .eq("id", id)
+
+      if (error) {
+        alert(error.message)
+        return
+      }
+    }
+
 
   fetchData()
 }
