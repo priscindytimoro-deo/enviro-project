@@ -71,6 +71,7 @@ export function LandingFooter() {
             gap-10
             lg:grid-cols-3
           "
+          id="footer"
         >
           {/* BRAND */}
           <div className="space-y-5">

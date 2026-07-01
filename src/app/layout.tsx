@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
+import { Analytics } from "@vercel/analytics/next";
+
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mplh-dlhtts.vercel.app"),
@@ -93,12 +95,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} antialiased`}>
+    <html lang="id" className={`${inter.variable} antialiased`}>
       <body className={inter.className}>
         <ThemeProvider defaultTheme="system" storageKey="nextjs-ui-theme">
           <SidebarConfigProvider>
             {children}
           </SidebarConfigProvider>
+
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
