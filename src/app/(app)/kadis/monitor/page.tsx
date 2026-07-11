@@ -37,7 +37,8 @@ export default function KadisMonitorPage() {
         .in("report_stage", [
           "kabid_review",
           "pengawas_review",
-          "admin_final_review",
+          "pengawasan_dijadwalkan",
+          "selesai",
         ])
         .order("created_at", { ascending: false }),
 

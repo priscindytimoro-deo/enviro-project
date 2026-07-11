@@ -23,7 +23,7 @@ export function StatsCard({
   usaha,
   laporan,
 }: Props) {
-  const kepatuhan = 0
+  const kepatuhan = (laporan/usaha)*100
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

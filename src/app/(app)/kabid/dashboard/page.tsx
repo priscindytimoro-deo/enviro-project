@@ -96,7 +96,7 @@ export default function KabidDashboardPage() {
     setMonitor(
       mapped
         .filter((x) =>
-          ["pengawas_review", "admin_final_review"].includes(
+          ["pengawas_review", "pengawasan_dijadwalkan", "selesai"].includes(
             x.report_stage
           )
         )

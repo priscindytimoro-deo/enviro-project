@@ -49,7 +49,7 @@ export default function KabidMonitorPage() {
 
     const result: KabidMonitor[] = reports
       .filter((r: any) =>
-        ["pengawas_review", "admin_final_review"].includes(r.report_stage)
+        ["pengawas_review", "pengawasan_dijadwalkan", "selesai"].includes(r.report_stage)
       )
       .map((r: any) => {
         const keg = kegiatanMap.get(r.usaha_kegiatan_id)

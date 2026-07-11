@@ -9,6 +9,7 @@ import { LandingFooter } from './components/footer'
 import FloatingActions from "./components/floating-actions";
 import { StatsSection } from "./components/stats-section";
 import VisitorTracker from "./components/visitor-tracker"
+import { FeedbackSection } from "./components/feedback-section"
 
 export function LandingPageContent() {
   const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
@@ -27,7 +28,7 @@ export function LandingPageContent() {
       </main>
       <FloatingActions />
       <StatsSection />
-      {/* Footer */}
+      <FeedbackSection />
       <LandingFooter />
     </div>
   )

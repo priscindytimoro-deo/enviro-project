@@ -4,7 +4,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
-import { Analytics } from "@vercel/analytics/next";
 
 
 export const metadata: Metadata = {
@@ -101,8 +100,6 @@ export default function RootLayout({
           <SidebarConfigProvider>
             {children}
           </SidebarConfigProvider>
-
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>

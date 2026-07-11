@@ -132,7 +132,8 @@ export default function KadisDashboardPage() {
           [
             "kabid_review",
             "pengawas_review",
-            "admin_final_review",
+            "pengawasan_dijadwalkan",
+            "selesai",
           ].includes(x.report_stage)
         )
         .slice(0, 5)
