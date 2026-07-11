@@ -1,45 +1,38 @@
-"use client";
+"use client"
 
-import { useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useEffect } from "react"
+import { v4 as uuidv4 } from "uuid"
+import { supabase } from "@/lib/supabase-client"
 
 export default function VisitorTracker() {
   useEffect(() => {
-    const trackVisitor = async () => {
-      try {
-        const today = new Date().toISOString().split("T")[0];
+    trackVisitor()
+  }, [])
 
-        let visitorId = localStorage.getItem("visitor_id");
+  async function trackVisitor() {
+    let visitorId = localStorage.getItem("visitor_id")
 
-        if (!visitorId) {
-          visitorId = crypto.randomUUID();
-          localStorage.setItem("visitor_id", visitorId);
-        }
+    if (!visitorId) {
+      visitorId = uuidv4()
+      localStorage.setItem("visitor_id", visitorId)
+    }
 
-        const lastVisit = localStorage.getItem("last_visit");
+    const today = new Date().toISOString().split("T")[0]
 
-        // Sudah dihitung hari ini
-        if (lastVisit === today) return;
+    const lastVisit = localStorage.getItem("last_visit")
 
-        const { error } = await supabase.from("visitors").insert({
-          visitor_id: visitorId,
-        });
+    if (lastVisit === today) return
 
-        if (!error) {
-          localStorage.setItem("last_visit", today);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
+    const { error } = await supabase
+      .from("landing_visitors")
+      .insert({
+        visitor_id: visitorId,
+      })
 
-    trackVisitor();
-  }, []);
+    if (!error) {
+      localStorage.setItem("last_visit", today)
+    }
+  }
 
-  return null;
+  return null
 }

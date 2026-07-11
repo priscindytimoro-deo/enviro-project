@@ -62,8 +62,18 @@ export function FeaturesSection() {
     <section
       id="features"
       className="
-        bg-muted/30
-        py-20
+        
+        relative overflow-hidden
+        py-24 sm:py-32
+
+        bg-gradient-to-b
+        from-white
+        via-green-50/50
+        to-white
+
+        dark:from-[#020817]
+        dark:via-[#041b11]
+        dark:to-[#020817]
       "
     >
       <div

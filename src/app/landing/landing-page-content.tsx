@@ -7,8 +7,8 @@ import { FeaturesSection } from './components/features-section'
 import { FaqSection } from './components/faq-section'
 import { LandingFooter } from './components/footer'
 import FloatingActions from "./components/floating-actions";
-// import VisitorTracker from "./components/visitor-tracker";
-// import { StatisticsSection } from "./components/statistics-section"
+import { StatsSection } from "./components/stats-section";
+import VisitorTracker from "./components/visitor-tracker"
 
 export function LandingPageContent() {
   const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
@@ -16,17 +16,17 @@ export function LandingPageContent() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
+      <VisitorTracker />
       <LandingNavbar />
-      {/* <VisitorTracker /> */}
 
       {/* Main Content */}
       <main>
         <HeroSection />
         <FeaturesSection />
         <FaqSection />
-        {/* <StatisticsSection /> */}
       </main>
       <FloatingActions />
+      <StatsSection />
       {/* Footer */}
       <LandingFooter />
     </div>
