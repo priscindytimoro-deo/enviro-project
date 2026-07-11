@@ -12,16 +12,25 @@ import {
   MapPin,
 } from "lucide-react"
 
+import {
+  FaTiktok,
+} from "react-icons/fa"
+
 const socialLinks = [
   {
     name: "Facebook",
-    href: "#",
+    href: "https://www.facebook.com/share/18pmVgFARh/?mibextid=wwXIfr",
     icon: Facebook,
   },
   {
     name: "Instagram",
-    href: "#",
+    href: "https://www.instagram.com/dlh_tts?igsh=M3hwODc2dWp3d3Zu",
     icon: Instagram,
+  },
+  {
+    name: "Tiktok",
+    href: "https://www.tiktok.com/@dlhkabtts?_r=1&_t=ZS-97x5JTHdcKf",
+    icon: FaTiktok,
   },
 ]
 
