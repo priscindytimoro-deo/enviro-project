@@ -70,7 +70,7 @@ export default function FloatingActions() {
       {showTop && (
         <button
           onClick={scrollToTop}
-          className="bg-gray-900 hover:bg-black text-white p-3 rounded-full shadow-lg transition-all hover:scale-110"
+          className="bg-primary text-white p-3 rounded-full shadow-lg transition-all hover:scale-110"
           title="Kembali ke atas"
         >
           <ArrowUp size={20} />
