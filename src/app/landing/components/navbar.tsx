@@ -35,7 +35,7 @@ const navigationItems = [
   { name: "Beranda", href: "#hero" },
   { name: "SOP", href: "#features" },
   { name: "Edukasi Lingkungan", href: "#faq" },
-  { name: "Dokumen", href: "#team" },
+  { name: "Saran & Masukan", href: "#feedback" },
   { name: "Kontak", href: "#footer" },
 ]
 

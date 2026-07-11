@@ -38,8 +38,8 @@ const footerMenus = [
         href: "#faq",
       },
       {
-        name: "Dokumen",
-        href: "#",
+        name: "Saran & Masukan",
+        href: "#feedback",
       },
       {
         name: "Kontak",
