@@ -352,11 +352,15 @@ export function FeaturesSection() {
               )}
             </ul>
 
-            <Button
-              size="lg"
-              variant="outline"
-            >
+            <Button size="lg">
               Lihat Panduan
+              <ArrowRight
+                className="
+                  ml-2
+                  h-4
+                  w-4
+                "
+              />
             </Button>
           </div>
 

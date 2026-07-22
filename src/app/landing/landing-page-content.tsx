@@ -12,15 +12,10 @@ import VisitorTracker from "./components/visitor-tracker"
 import { FeedbackSection } from "./components/feedback-section"
 
 export function LandingPageContent() {
-  const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
       <VisitorTracker />
       <LandingNavbar />
-
-      {/* Main Content */}
       <main>
         <HeroSection />
         <FeaturesSection />
